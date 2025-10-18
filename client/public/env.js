@@ -1,0 +1,1 @@
+// is in blank tu avoid 404 error this file is used to change the .env vars dynamically in the employ of the docker image

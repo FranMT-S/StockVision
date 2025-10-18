@@ -1,0 +1,83 @@
+
+export interface Recomendation {
+    id: number; 
+    ticker_id: string; 
+    target_from: string; 
+    target_to: string; 
+    action: string; 
+    rating_from: string; 
+    rating_to: string; 
+    time: string;
+    brokerage: Brokerage,
+    sentiment: string;
+}
+
+export interface Brokerage {
+    name: string;
+}
+
+export interface Ticker {
+  ticker: string;
+  price: number;
+  logo: string;
+}
+
+
+export interface CompanyData {
+  symbol: string;
+  price: number;
+  marketCap: number;
+  beta: number;
+  lastDividend: number;
+  change: number;
+  changePercentage: number;
+  volume: number;
+  averageVolume: number;
+  companyName: string;
+  exchangeFullName: string;
+  exchange: string;
+  industry: string;
+  website: string;
+  sector: string;
+  country: string;
+  image: string;
+  ceo: string;
+}
+
+export interface HistoricalPrice{
+  symbol: string;
+  date: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+  change: number;
+  changePercent: number;
+  vwap: number;
+}
+
+export interface CompanyNew {
+  id: number;
+  category: string;
+  datetime: string;
+  headline: string;
+  image: string;
+  related: string;
+  source: string;
+  summary: string;
+  url: string;
+}
+
+export interface CompanyOverview {
+  companyData:CompanyData,
+  recommendations:Recomendation[],
+  historicalPrices:HistoricalPrice[],
+  companyNews:CompanyNew[]
+}
+
+export interface RecomendationResponse{
+  recomendation:Recomendation,
+  ticker:Ticker,
+  companyData:CompanyData
+}
