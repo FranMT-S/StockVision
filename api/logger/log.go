@@ -9,8 +9,8 @@ import (
 
 var logger zerolog.Logger
 
-// init initializes the logger
-func init() {
+// Init initializes the logger
+func InitLogger() {
 	if err := os.MkdirAll("logs/api", os.ModePerm); err != nil {
 		panic(err)
 	}

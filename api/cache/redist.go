@@ -62,3 +62,7 @@ func (r *Reddis) Delete(ctx context.Context, key string) error {
 func (r *Reddis) Close() error {
 	return r.client.Close()
 }
+
+func (r *Reddis) Ping(ctx context.Context) error {
+	return r.client.Ping(ctx).Err()
+}

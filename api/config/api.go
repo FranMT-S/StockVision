@@ -56,3 +56,20 @@ func Finnhub() *FinnhubConfig {
 
 	return finnhubConfigInstance
 }
+
+type GeminiAiConfig struct {
+	Token string
+}
+
+var geminiAiConfigInstance *GeminiAiConfig
+
+// GetGeminiAiConfig returns the geminiAiConfig instance
+func GeminiAi() *GeminiAiConfig {
+	if geminiAiConfigInstance == nil {
+		geminiAiConfigInstance = &GeminiAiConfig{
+			Token: getEnvWithDefault("GEMINI_API_KEY", ""),
+		}
+	}
+
+	return geminiAiConfigInstance
+}

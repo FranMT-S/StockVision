@@ -2,10 +2,11 @@ package filters
 
 import (
 	"api/config"
+	"api/sanatizer"
 )
 
 type Filters struct {
-	Query    SanatizerString
+	Query    string
 	Page     int
 	PageSize int
 	Sort     Sort
@@ -31,6 +32,8 @@ func (f *Filters) Normalize() {
 	if f.Query == "" {
 		f.Query = ""
 	}
+
+	f.Query = sanatizer.SanitizeForSQL(f.Query)
 }
 
 func (f Filters) Offset() int {

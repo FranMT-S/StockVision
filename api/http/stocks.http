@@ -1,0 +1,26 @@
+@base = http://localhost:8080
+@url = {{base}}/api/v1
+
+### Root 
+GET {{base}}/
+Accept: application/json
+Content-Type: application/json
+
+### Health
+GET {{base}}/health
+Accept: application/json
+Content-Type: application/json
+
+### Tickers Recommendations
+GET {{url}}/tickers?page=1&sort=asc&q=&size=10
+Accept: application/json
+Content-Type: application/json
+
+### Ticker overview
+GET {{url}}/tickers/AAPL/overview
+Accept: application/json
+Content-Type: application/json
+
+### Ticker logo
+GET {{url}}/tickers/AAPL/logo
+Content-Type: application/json

@@ -6,13 +6,15 @@ import (
 	"api/models/filters"
 	"api/models/responses"
 	"api/services"
-	"fmt"
+	"context"
+	"encoding/json"
 	"net/http"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/go-chi/chi/v5"
 	"gorm.io/gorm"
 )
 
@@ -30,41 +32,44 @@ func NewTickersController(tickerService services.TickerService) TickersControlle
 
 // GetTickerLogo retrieves the logo url of a ticker
 // Path param: id (string)
-func (c *TickersController) GetTickerLogo(ctx *gin.Context) {
-	id := ctx.Param("id")
+func (c *TickersController) GetTickerLogo(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
 	if id == "" {
-		ctx.JSON(http.StatusBadRequest, models.NewResponseError("Ticker ID is required"))
+		respondError(w, http.StatusBadRequest, "Ticker ID is required")
 		return
 	}
 
-	logo, err := c.tickerService.GetLogoUrl(ctx.Request.Context(), id)
+	logo, err := c.tickerService.GetLogoUrl(r.Context(), id)
 	if err != nil {
 		apilogger.Logger().Error().Err(err).Msg("Failed to retrieve ticker logo")
-		ctx.JSON(http.StatusInternalServerError, models.NewResponseError("Failed to retrieve ticker logo"))
+		respondError(w, http.StatusInternalServerError, "Failed to retrieve ticker logo")
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{
+	respondJSON(w, http.StatusOK, map[string]interface{}{
 		"data": logo,
 	})
 }
 
-// GetTickers retrieves a paginated list of tickers
+// ListTickers retrieves a paginated list of tickers, with company data and recommendations
 // Query params: page (int), pageSize (int), order (asc/desc)
-func (c *TickersController) GetTickersRecommendations(ctx *gin.Context) {
-	filter := parseFilters(ctx)
+func (c *TickersController) ListTickers(w http.ResponseWriter, r *http.Request) {
+	filter := parseFilters(r)
 
-	tickers, err := c.tickerService.GetRecommendations(ctx.Request.Context(), filter)
+	ctxCancel, cancelManual := context.WithTimeout(r.Context(), 60*time.Second)
+	defer cancelManual()
+
+	tickers, total, err := c.tickerService.GetTickers(ctxCancel, filter)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, models.NewResponseError("Failed to retrieve tickers"))
+		respondError(w, http.StatusInternalServerError, "Failed to retrieve tickers")
 		return
 	}
 
 	if len(tickers) == 0 {
-		ctx.JSON(http.StatusOK, gin.H{
+		respondJSON(w, http.StatusOK, map[string]interface{}{
 			"data":  []responses.RecomendationResponse{},
-			"count": 0,
+			"total": total,
 		})
 		return
 	}
@@ -73,68 +78,67 @@ func (c *TickersController) GetTickersRecommendations(ctx *gin.Context) {
 
 	for i, ticker := range tickers {
 		recomendations[i] = responses.RecomendationResponse{
-			Recomendation: ticker,
-			Ticker:        ticker.Ticker,
+			Ticker: ticker,
 		}
 	}
 
 	var wg sync.WaitGroup
-	for i, r := range recomendations {
+	for i, rec := range recomendations {
 		wg.Add(1)
-		fmt.Println(r.Ticker.ID)
-		go func() {
+
+		go func(index int, r responses.RecomendationResponse) {
 			defer wg.Done()
-			companyData, err := c.tickerService.GetCompanyData(ctx.Request.Context(), string(r.Ticker.ID))
+			companyData, err := c.tickerService.GetCompanyData(ctxCancel, string(r.Ticker.ID))
 			if err != nil {
 				apilogger.Logger().Error().Err(err).Msg("Failed to retrieve ticker with ID:" + string(r.Ticker.ID))
 			}
 
-			fmt.Println("put data in recomendation" + string(r.Ticker.ID))
-			recomendations[i].CompanyData = companyData
-		}()
+			recomendations[index].CompanyData = companyData
+		}(i, rec)
 	}
 
 	wg.Wait()
 
-	ctx.JSON(http.StatusOK, gin.H{
+	respondJSON(w, http.StatusOK, map[string]interface{}{
 		"data":  recomendations,
-		"count": len(recomendations),
+		"total": total,
 	})
 }
 
 // GetTickerOverview retrieves a single ticker by ID with its recommendations
 // Path param: id (string)
-func (c *TickersController) GetTickerOverview(ctx *gin.Context) {
-	id := ctx.Param("id")
+func (c *TickersController) GetTickerOverview(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
 	var tickerOverview responses.CompanyOverview
+	ctxCancel, cancelManual := context.WithTimeout(r.Context(), 60*time.Second)
+	defer cancelManual()
 
 	if id == "" {
-		ctx.JSON(http.StatusBadRequest, models.NewResponseError("Ticker ID is required"))
+		respondError(w, http.StatusBadRequest, "Ticker ID is required")
 		return
 	}
 
-	ticker, err := c.tickerService.GetTickerByID(ctx.Request.Context(), id)
+	ticker, err := c.tickerService.GetTickerByID(ctxCancel, id)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			ctx.JSON(http.StatusNotFound, models.NewResponseError("Ticker not found"))
+			respondError(w, http.StatusNotFound, "Ticker not found")
 			return
 		}
 
 		apilogger.Logger().Error().Err(err).Msg("Failed to retrieve ticker with ID:" + id)
-		ctx.JSON(http.StatusInternalServerError, models.NewResponseError("Failed to retrieve ticker"))
+		respondError(w, http.StatusInternalServerError, "Failed to retrieve ticker")
 		return
 	}
 
-	tickerOverview.Recomendations = ticker.Recommendations
+	tickerOverview.Recommendations = ticker.Recommendations
 
 	var wg sync.WaitGroup
-	wg.Add(3)
-
 	// Get company data
+	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		companyData, err := c.tickerService.GetCompanyData(ctx.Request.Context(), id)
+		companyData, err := c.tickerService.GetCompanyData(ctxCancel, id)
 		if err != nil {
 			apilogger.Logger().Error().Err(err).Msg("Failed to retrieve company data with ID:" + id)
 			tickerOverview.CompanyData = models.CompanyData{}
@@ -144,9 +148,10 @@ func (c *TickersController) GetTickerOverview(ctx *gin.Context) {
 	}()
 
 	// Get historical prices
+	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		historicalPrices, err := c.tickerService.GetHistoricalPrices(ctx.Request.Context(), id, "", "")
+		historicalPrices, err := c.tickerService.GetHistoricalPrices(ctxCancel, id, "", "")
 		if err != nil {
 			apilogger.Logger().Error().Err(err).Msg("Failed to retrieve historical prices with ID:" + id)
 			tickerOverview.HistoricalPrices = []models.HistoricalPrice{}
@@ -157,9 +162,10 @@ func (c *TickersController) GetTickerOverview(ctx *gin.Context) {
 	}()
 
 	// Get company news
+	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		companyNews, err := c.tickerService.GetNews(ctx.Request.Context(), id, "", "")
+		companyNews, err := c.tickerService.GetNews(ctxCancel, id, "", "")
 		if err != nil {
 			apilogger.Logger().Error().Err(err).Msg("Failed to retrieve company news with ID:" + id)
 			tickerOverview.CompanyNews = []models.CompanyNew{}
@@ -169,33 +175,39 @@ func (c *TickersController) GetTickerOverview(ctx *gin.Context) {
 	}()
 	wg.Wait()
 
-	ctx.JSON(http.StatusOK, gin.H{
+	respondJSON(w, http.StatusOK, map[string]interface{}{
 		"data": tickerOverview,
 	})
 }
 
 // GetRecommendations retrieves a paginated list of recommendations
 // Query params: page (int, default: 1), pageSize (int, default: 10), order (asc/desc)
-func (c *TickersController) GetRecommendations(ctx *gin.Context) {
-	filter := parseFilters(ctx)
+func (c *TickersController) GetRecommendations(w http.ResponseWriter, r *http.Request) {
+	filter := parseFilters(r)
 
-	recommendations, err := c.tickerService.GetRecommendations(ctx.Request.Context(), filter)
+	ctxCancel, cancelManual := context.WithTimeout(r.Context(), 60*time.Second)
+	defer cancelManual()
+
+	recommendations, err := c.tickerService.GetRecommendations(ctxCancel, filter)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, models.NewResponseError("Failed to retrieve recommendations"))
+		respondError(w, http.StatusInternalServerError, "Failed to retrieve recommendations")
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{
+	respondJSON(w, http.StatusOK, map[string]interface{}{
 		"data":  recommendations,
 		"count": len(recommendations),
 	})
 }
 
 // parseFilters extracts pagination and ordering parameters from query string
-func parseFilters(ctx *gin.Context) filters.Filters {
-	page, _ := strconv.Atoi(ctx.DefaultQuery("page", "0"))
-	size, _ := strconv.Atoi(ctx.DefaultQuery("size", "0"))
-	sortStr := strings.ToLower(ctx.DefaultQuery("sort", ""))
+func parseFilters(r *http.Request) filters.Filters {
+	query := r.URL.Query()
+
+	page, _ := strconv.Atoi(query.Get("page"))
+	size, _ := strconv.Atoi(query.Get("size"))
+	sortStr := strings.ToLower(query.Get("sort"))
+	queryStr := query.Get("q")
 
 	var sort filters.Sort
 	switch sortStr {
@@ -211,5 +223,17 @@ func parseFilters(ctx *gin.Context) filters.Filters {
 		Page:     page,
 		PageSize: size,
 		Sort:     sort,
+		Query:    queryStr,
 	}
+}
+
+// Helper functions
+func respondJSON(w http.ResponseWriter, status int, data interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(data)
+}
+
+func respondError(w http.ResponseWriter, status int, message string) {
+	respondJSON(w, status, models.NewResponseError(message))
 }

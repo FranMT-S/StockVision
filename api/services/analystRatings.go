@@ -15,15 +15,15 @@ import (
 // StockRecommendation struct for stock recommendation
 // Ticker is the stock ticker
 type StockRecommendation struct {
-	Ticker     string        `json:"ticker"`
-	Company    string        `json:"company"`
-	Action     models.Action `json:"action"`
-	Brokerage  string        `json:"brokerage"`
-	TargetFrom string        `json:"target_from"`
-	TargetTo   string        `json:"target_to"`
-	RatingFrom string        `json:"rating_from"`
-	RatingTo   string        `json:"rating_to"`
-	Time       time.Time     `json:"time"`
+	Ticker     string                `json:"ticker"`
+	Company    string                `json:"company"`
+	Action     models.Action         `json:"action"`
+	Brokerage  string                `json:"brokerage"`
+	TargetFrom models.CurrencyString `json:"target_from"`
+	TargetTo   models.CurrencyString `json:"target_to"`
+	RatingFrom string                `json:"rating_from"`
+	RatingTo   string                `json:"rating_to"`
+	Time       time.Time             `json:"time"`
 }
 
 // AnalystRatingResponse struct for analyst ratings response
@@ -92,4 +92,10 @@ func (s *AnalystRatingsService) GetWithNext(nextPage string) (AnalystRatingRespo
 	}
 
 	return recommendation, nil
+}
+
+// ParseTimeNanoToRFC3339 parses a time string in RFC3339Nano format
+// 2025-09-15T00:30:05.082205952Z
+func ParseTimeNanoToRFC3339(t time.Time) (time.Time, error) {
+	return time.Parse(time.RFC3339, t.Format(time.RFC3339))
 }

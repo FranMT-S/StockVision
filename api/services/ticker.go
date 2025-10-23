@@ -5,6 +5,9 @@ import (
 	"api/database/scopes"
 	"api/models"
 	"api/models/filters"
+	"api/models/ratings"
+	"strings"
+	"time"
 
 	"context"
 
@@ -14,14 +17,14 @@ import (
 
 // TickerService defines the interface for stock-related operations
 type TickerService interface {
-	GetTickers(ctx context.Context, filters filters.Filters) ([]models.Ticker, error)
+	GetTickers(ctx context.Context, filters filters.Filters) ([]models.Ticker, int64, error)
 	GetTickerByID(ctx context.Context, id string) (*models.Ticker, error)
 	GetRecommendations(ctx context.Context, filters filters.Filters) ([]models.Recommendation, error)
 
 	// Insert operations
-	InsertTickers(ctx context.Context, tickers []models.Ticker) (int64, error)
-	InsertBrokerages(ctx context.Context, brokerages []models.Brokerage) (int64, error)
-	InsertRecommendations(ctx context.Context, recommendations []models.Recommendation) (int64, error)
+	InsertTickers(ctx context.Context, tickers []models.Ticker, batchSize int) (int64, error)
+	InsertBrokerages(ctx context.Context, brokerages []models.Brokerage, batchSize int) (int64, error)
+	InsertRecommendations(ctx context.Context, recommendations []models.Recommendation, batchSize int) (int64, error)
 
 	// Overview operations
 	GetHistoricalPrices(ctx context.Context, ticker string, from string, to string) ([]models.HistoricalPrice, error)
@@ -58,14 +61,51 @@ func NewTickerService(db *gorm.DB, cache cache.ICache) TickerService {
 // GetTickers implements TickerService interface
 // GetTickers retrieves a paginated list of tickers
 // If pageSize and page are 0 or less, returns all tickers
-func (s *tickerService) GetTickers(ctx context.Context, f filters.Filters) (tickers []models.Ticker, err error) {
+func (s *tickerService) GetTickers(ctx context.Context, filter filters.Filters) (tickers []models.Ticker, total int64, err error) {
+	var cacheKey string = "tickers:total"
+
 	query := s.db.WithContext(ctx).Model(&models.Ticker{})
+	filter.Normalize()
 
-	f.Normalize()
+	if filter.Query != "" {
+		query = query.
+			Where("id LIKE ?", strings.ToUpper(filter.Query)+"%").
+			Or("company ILIKE ?", "%"+filter.Query+"%")
 
-	query = query.Scopes(scopes.SortCompany(f.Sort), scopes.Pagination(f.Page, f.PageSize))
-	err = query.Find(&tickers).Error
-	return tickers, err
+		cacheKey = "" // no cache
+	}
+
+	total, err = cache.GetOrLoad(ctx, s.cache, cacheKey, 30*time.Minute, func() (int64, error) {
+		var total int64
+		err = query.Count(&total).Error
+		return total, err
+	})
+
+	query = query.Scopes(scopes.SortCompany(filter.Sort), scopes.Pagination(filter.Page, filter.PageSize))
+
+	err = query.Preload("Recommendations.Brokerage").Find(&tickers).Error
+
+	if err != nil {
+		return nil, 0, err
+	}
+
+	var ratingCollection ratings.RatingCollection
+
+	for i := range tickers {
+		if tickers[i].Recommendations == nil {
+			ratingCollection = ratings.RatingCollection{}
+			continue
+		}
+
+		for j := range tickers[i].Recommendations {
+			ratingCollection = append(ratingCollection, ratings.Rating(tickers[i].Recommendations[j].RatingTo))
+		}
+
+		tickerSentiment := ratingCollection.CalculateSentiment()
+		tickers[i].Sentiment = tickerSentiment.Sentiment
+	}
+
+	return tickers, total, err
 }
 
 // GetTickerByID implements TickerService interface
@@ -80,39 +120,61 @@ func (s *tickerService) GetTickerByID(ctx context.Context, id string) (*models.T
 	if err != nil {
 		return nil, err
 	}
+
+	var ratingCollection ratings.RatingCollection
+
+	for i := range ticker.Recommendations {
+		if ticker.Recommendations[i].Brokerage.Name == "" {
+			ticker.Recommendations[i].Brokerage.Name = "Anonimous"
+		}
+
+		ratingCollection = append(ratingCollection, ratings.Rating(ticker.Recommendations[i].RatingTo))
+	}
+
+	tickerSentiment := ratingCollection.CalculateSentiment()
+	ticker.Sentiment = tickerSentiment.Sentiment
+
 	return &ticker, nil
 }
 
 // InsertTickers implements TickerService interface
 // InsertTickers inserts or updates tickers in the database
 // If a ticker with the same ID exists, it will be updated
-func (s *tickerService) InsertTickers(ctx context.Context, tickers []models.Ticker) (int64, error) {
+func (s *tickerService) InsertTickers(ctx context.Context, tickers []models.Ticker, batchSize int) (int64, error) {
 	if len(tickers) == 0 {
 		return 0, nil
 	}
 
-	result := s.db.WithContext(ctx).Clauses(clause.OnConflict{
+	if batchSize <= 0 {
+		batchSize = 1000
+	}
+
+	db := s.db.WithContext(ctx).Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "id"}},
 		DoUpdates: clause.AssignmentColumns([]string{"company"}),
-	}).Create(&tickers)
+	})
 
-	return result.RowsAffected, result.Error
+	return batchFunc(db, tickers, batchSize)
 }
 
 // InsertBrokerages implements TickerService interface
 // InsertBrokerages inserts or updates brokerages in the database
 // If a brokerage with the same name exists, it will be updated
-func (s *tickerService) InsertBrokerages(ctx context.Context, brokerages []models.Brokerage) (int64, error) {
+func (s *tickerService) InsertBrokerages(ctx context.Context, brokerages []models.Brokerage, batchSize int) (int64, error) {
 	if len(brokerages) == 0 {
 		return 0, nil
 	}
 
-	result := s.db.WithContext(ctx).Clauses(clause.OnConflict{
+	if batchSize <= 0 {
+		batchSize = 1000
+	}
+
+	db := s.db.WithContext(ctx).Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "name"}},
 		DoUpdates: clause.AssignmentColumns([]string{"name"}),
-	}).Create(&brokerages)
+	})
 
-	return result.RowsAffected, result.Error
+	return batchFunc(db, brokerages, batchSize)
 }
 
 // GetRecommendations implements TickerService interface
@@ -125,8 +187,6 @@ func (s *tickerService) GetRecommendations(ctx context.Context, f filters.Filter
 
 	f.Normalize()
 
-	// Apply pagination
-
 	query = query.Scopes(scopes.Pagination(f.Page, f.PageSize)).Order("ticker_id " + f.Sort.String())
 
 	err = query.Find(&recommendations).Error
@@ -136,19 +196,47 @@ func (s *tickerService) GetRecommendations(ctx context.Context, f filters.Filter
 // InsertRecommendations implements TickerService interface
 // InsertRecommendations inserts or updates recommendations in the database
 // If a recommendation with the same ID exists, it will be updated
-func (s *tickerService) InsertRecommendations(ctx context.Context, recommendations []models.Recommendation) (int64, error) {
+func (s *tickerService) InsertRecommendations(ctx context.Context, recommendations []models.Recommendation, batchSize int) (int64, error) {
 	if len(recommendations) == 0 {
 		return 0, nil
+	}
+
+	if batchSize <= 0 {
+		batchSize = 1000
 	}
 
 	for i := range recommendations {
 		recommendations[i].Action = recommendations[i].Action.Normalize()
 	}
 
-	result := s.db.WithContext(ctx).Clauses(clause.OnConflict{
+	db := s.db.WithContext(ctx).Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "ticker_id"}, {Name: "brokerage_id"}, {Name: "time"}},
 		DoNothing: true,
-	}).Create(&recommendations)
+	})
 
-	return result.RowsAffected, result.Error
+	return batchFunc(db, recommendations, batchSize)
+}
+
+// batchFunc is a generic function to execute a create operation in batches
+func batchFunc[T any](db *gorm.DB, list []T, batchSize int) (int64, error) {
+	var affectedRows int64
+
+	for i := 0; i < len(list); i += batchSize {
+		end := i + batchSize
+		if end > len(list) {
+			end = len(list)
+		}
+
+		listBatch := list[i:end]
+
+		result := db.Create(&listBatch)
+
+		if result.Error != nil {
+			return affectedRows, result.Error
+		}
+
+		affectedRows += result.RowsAffected
+	}
+
+	return affectedRows, nil
 }

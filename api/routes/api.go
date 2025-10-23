@@ -1,17 +1,25 @@
 package routes
 
 import (
+	"api/controllers"
 	"api/models"
+	"api/services"
 
-	"github.com/gin-gonic/gin"
+	"github.com/go-chi/chi/v5"
 )
 
-// SetupRoutes configures the routes
-func SetupRoutes(router *gin.Engine, config *models.ServerConfig) {
-	api := router.Group("/api")
+func SetupRoutes(router *chi.Mux, config *models.ServerConfig) {
+	// Initialize services
+	tickerService := services.NewTickerService(config.DB, config.Cache)
 
-	v1 := api.Group("v1")
-	tickers := v1.Group("tickers")
-	SetTickersRoutes(tickers, config)
+	// Initialize controllers
+	tickersController := controllers.NewTickersController(tickerService)
 
+	// API v1 routes
+	router.Route("/api/v1", func(r chi.Router) {
+		// Tickers routes
+		r.Get("/tickers", tickersController.ListTickers)
+		r.Get("/tickers/{id}/logo", tickersController.GetTickerLogo)
+		r.Get("/tickers/{id}/overview", tickersController.GetTickerOverview)
+	})
 }

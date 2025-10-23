@@ -2,22 +2,21 @@ package config
 
 import (
 	"os"
-	"strings"
 )
 
 type ServerConfig struct {
 	Port       string
-	ClientHost []string
+	ClientHost string
 	Env        string
 }
 
 var serverConfig *ServerConfig
 
 func Server() *ServerConfig {
-	clientHost := strings.Split(os.Getenv("CLIENTS_HOST"), ",")
+	clientHost := os.Getenv("CLIENT_HOST")
 
-	if len(clientHost) == 1 && clientHost[0] == "" {
-		clientHost = []string{"http://localhost:5173"}
+	if clientHost == "" {
+		clientHost = "http://localhost:5173"
 	}
 
 	if serverConfig == nil {

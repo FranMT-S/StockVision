@@ -6,6 +6,7 @@ import (
 	"api/models"
 	"api/services"
 	"context"
+	"fmt"
 
 	"github.com/spf13/cobra"
 )
@@ -14,38 +15,54 @@ var fillDbCmd = &cobra.Command{
 	Use:   "fill-db",
 	Short: "Fill database with initial data",
 	Long:  `Run fill-db to fill the database with initial data from the Stock API`,
-	Run:   fillDb,
+	RunE:  fillDb,
 }
 
 // FillDb fills the database with initial data from the Stock API
 // run after the database is initialized
-func fillDb(cmd *cobra.Command, args []string) {
+func fillDb(cmd *cobra.Command, args []string) error {
 	db, err := database.GetDB()
 	if err != nil {
-		apilogger.Logger().Err(err).Msg("failed to get database instance")
-		return
+		apilogger.Logger().Err(err).Msg("[fillDb] failed to get database instance")
+		return err
 	}
+	fmt.Println("Start fillDb")
 
 	analystRatingsService := services.NewAnalystRatingsService(db.DB)
 	stockRecommendations, err := analystRatingsService.GetAll()
 	if err != nil {
-		apilogger.Logger().Err(err).Msg("failed to get recommendations")
-		return
+		apilogger.Logger().Err(err).Msg("[fillDb] failed to get recommendations")
+		return err
 	}
 
 	tickerService := services.NewTickerService(db.DB, nil)
 
 	// clean and prepare the entities for insertion
 	tickers, brokerages := cleanAndPrepareEntities(stockRecommendations)
-	tickerService.InsertTickers(context.Background(), tickers)
-	tickerService.InsertBrokerages(context.Background(), brokerages)
+	_, err = tickerService.InsertTickers(context.Background(), tickers, 1000)
+	if err != nil {
+		apilogger.Logger().Err(err).Msg("[fillDb] failed to insert tickers")
+		return err
+	}
+	_, err = tickerService.InsertBrokerages(context.Background(), brokerages, 1000)
+	if err != nil {
+		apilogger.Logger().Err(err).Msg("[fillDb] failed to insert brokerages")
+		return err
+	}
 
 	// create the map of brokerages with ids
 	brokeragesWithIdsMap := createBrokeragesWithIdsMap(brokerages)
 	recommendations := createRecommendations(stockRecommendations, brokeragesWithIdsMap)
-	tickerService.InsertRecommendations(context.Background(), recommendations)
+
+	_, err = tickerService.InsertRecommendations(context.Background(), recommendations, 1000)
+	if err != nil {
+		apilogger.Logger().Err(err).Msg("[fillDb] failed to insert recommendations")
+		return err
+	}
 
 	apilogger.Logger().Info().Msg("Database filled successfully")
+	fmt.Println("Database filled successfully")
+	return nil
 }
 
 // cleanAndPrepareEntities cleans and prepares the entities for insertion and remove the brokerages with empty name
@@ -97,22 +114,24 @@ func createBrokeragesWithIdsMap(brokerages []models.Brokerage) map[string]uint {
 func createRecommendations(stockRecommendations []services.StockRecommendation, brokeragesWithIdsMap map[string]uint) []models.Recommendation {
 	var recommendations []models.Recommendation
 	for _, recommendation := range stockRecommendations {
-		// // if the brokerage not exists, skip the recommendation
-		// // we want to keep the recommendations with the brokerages id to prioritize confidence that theys provide
-		// if brokeragesWithIdsMap[recommendation.Brokerage] == 0 {
-		// 	continue
-		// }
+
+		parsedTime, err := ParseTimeNanoToRFC3339(recommendation.Time)
+		if err != nil {
+			apilogger.Logger().Err(err).Msg("[createRecommendations] failed to parse time, recommendation: " + recommendation.Ticker)
+			continue
+		}
 
 		recommendation := models.Recommendation{
 			TickerID:    recommendation.Ticker,
 			BrokerageID: brokeragesWithIdsMap[recommendation.Brokerage],
-			TargetFrom:  recommendation.TargetFrom,
-			TargetTo:    recommendation.TargetTo,
+			TargetFrom:  recommendation.TargetFrom.CurrencyToFloat(),
+			TargetTo:    recommendation.TargetTo.CurrencyToFloat(),
 			Action:      recommendation.Action,
 			RatingFrom:  recommendation.RatingFrom,
 			RatingTo:    recommendation.RatingTo,
-			Time:        recommendation.Time,
+			Time:        parsedTime,
 		}
+
 		recommendations = append(recommendations, recommendation)
 	}
 

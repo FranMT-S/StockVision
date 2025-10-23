@@ -13,6 +13,7 @@ import (
 func main() {
 
 	// Setup logger
+	apilogger.InitLogger()
 	apilogger.SetLogLevel(config.Log().Level)
 
 	// Setup routes
@@ -30,7 +31,11 @@ func main() {
 	defer cache.Close()
 
 	// initial fill database with initial data with fill-db command if the arguments are more than 1
-	cmd.NewCmd().Execute()
+	err = cmd.NewCmd().Execute()
+	if err != nil {
+		apilogger.Logger().Err(err).Msg("Error executing command")
+		panic(err)
+	}
 
 	configServer := models.NewServerConfig(
 		db.DB,

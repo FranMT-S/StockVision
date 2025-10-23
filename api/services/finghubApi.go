@@ -4,6 +4,7 @@ import (
 	"api/cache"
 	"api/config"
 	"api/models"
+	"api/sanatizer"
 	CustomClient "api/services/customClient"
 	"context"
 	"fmt"
@@ -75,6 +76,19 @@ func (s *FinghubService) GetNews(ctx context.Context, ticker string, from string
 
 	if err != nil {
 		return nil, err
+	}
+
+	for i := range news {
+		news[i].Headline = sanatizer.SanatizerString(news[i].Headline).SanatizedAll().String()
+		news[i].Summary = sanatizer.SanatizerString(news[i].Summary).SanatizedAll().String()
+		news[i].Image = sanatizer.SanatizerString(news[i].Image).SanatizedAll().String()
+		news[i].URL = sanatizer.SanatizerString(news[i].URL).SanatizedAll().String()
+		news[i].Source = sanatizer.SanatizerString(news[i].Source).SanatizedAll().String()
+		news[i].Related = sanatizer.SanatizerString(news[i].Related).SanatizedAll().String()
+		news[i].Category = sanatizer.SanatizerString(news[i].Category).SanatizedAll().String()
+		t := time.Unix(int64(news[i].Datetime), 0).UTC()
+		news[i].DatetimeUTC = t.String()
+
 	}
 
 	return news, nil
