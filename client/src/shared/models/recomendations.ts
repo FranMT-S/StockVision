@@ -1,5 +1,5 @@
 
-export interface Recomendation {
+export interface Recommendation {
     id: number; 
     ticker_id: string; 
     target_from: string; 
@@ -8,18 +8,19 @@ export interface Recomendation {
     rating_from: string; 
     rating_to: string; 
     time: string;
-    brokerage: Brokerage,
-    sentiment: string;
+    brokerage: Brokerage
 }
 
 export interface Brokerage {
+    id: number;
     name: string;
 }
 
 export interface Ticker {
-  ticker: string;
-  price: number;
-  logo: string;
+  company:string,
+  id:string,
+  sentiment: string;
+  recommendations?: Recommendation[];
 }
 
 
@@ -60,7 +61,8 @@ export interface HistoricalPrice{
 export interface CompanyNew {
   id: number;
   category: string;
-  datetime: string;
+  datetime: number;
+  datetimeUtc: string;
   headline: string;
   image: string;
   related: string;
@@ -71,13 +73,12 @@ export interface CompanyNew {
 
 export interface CompanyOverview {
   companyData:CompanyData,
-  recommendations:Recomendation[],
+  recommendations:Recommendation[],
   historicalPrices:HistoricalPrice[],
   companyNews:CompanyNew[]
 }
 
-export interface RecomendationResponse{
-  recomendation:Recomendation,
+export interface TickerListResponse{
   ticker:Ticker,
   companyData:CompanyData
 }

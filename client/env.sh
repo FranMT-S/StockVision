@@ -3,8 +3,8 @@ set -e
 
 
 # validate
-if [[ ! "$VITE_API_URL" =~ ^https?://[a-zA-Z0-9./?&=#_-]+$ ]]; then
-  echo "Invalid VITE_API_URL"
+if ! echo "$VITE_API_URL" | grep -Eq '^https?://[^[:space:]]+$'; then
+  echo "Invalid VITE_API_URL: $VITE_API_URL"
   exit 1
 fi
 

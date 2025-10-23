@@ -1,83 +1,94 @@
 <template>
-  <v-card class="company-metrics" elevation="2">
-    <v-card-title class="pa-4">
-      <h3 class="text-h6 font-weight-medium text-grey-darken-3">
+  <div>
+    <v-card-title class="pa-4 py-4">
+      <h3 class="text-body-1 font-weight-medium text-grey-darken-3">
         Key Metrics
       </h3>
     </v-card-title>
     
-    <v-card-text class="pa-4">
-      <v-row>
-        <v-col cols="6" class="pb-2">
-          <div class="metric-item">
-            <div class="text-caption text-grey-darken-1 mb-1">Volume</div>
-            <div class="text-body-1 font-weight-medium text-grey-darken-3">
-              {{ formatVolume(companyData.volume) }}
-            </div>
-          </div>
-        </v-col>
-        
-        <v-col cols="6" class="pb-2">
-          <div class="metric-item">
-            <div class="text-caption text-grey-darken-1 mb-1">Avg Volume</div>
-            <div class="text-body-1 font-weight-medium text-grey-darken-3">
-              {{ formatVolume(companyData.averageVolume) }}
-            </div>
-          </div>
-        </v-col>
-        
-        <v-col cols="6" class="pb-2">
-          <div class="metric-item">
-            <div class="text-caption text-grey-darken-1 mb-1">Beta</div>
-            <div class="text-body-1 font-weight-medium text-grey-darken-3">
-              {{ companyData.beta.toFixed(2) }}
-            </div>
-          </div>
-        </v-col>
-        
-        <v-col cols="6" class="pb-2">
-          <div class="metric-item">
-            <div class="text-caption text-grey-darken-1 mb-1">Dividend</div>
-            <div class="text-body-1 font-weight-medium text-grey-darken-3">
-              ${{ companyData.lastDividend.toFixed(2) }}
-            </div>
-          </div>
-        </v-col>
-        
-        <v-col cols="6" class="pb-2">
-          <div class="metric-item">
-            <div class="text-caption text-grey-darken-1 mb-1">Sector</div>
-            <div class="text-body-1 font-weight-medium text-grey-darken-3">
-              {{ companyData.sector }}
-            </div>
-          </div>
-        </v-col>
-        
-        <v-col cols="6" class="pb-2">
-          <div class="metric-item">
-            <div class="text-caption text-grey-darken-1 mb-1">Industry</div>
-            <div class="text-body-1 font-weight-medium text-grey-darken-3">
-              {{ companyData.industry }}
-            </div>
-          </div>
-        </v-col>
-        
-        <v-col cols="12" class="pt-2">
+    <v-card-text class="pa-4 py-0">
+      <v-row class="mb-0">
+        <v-col cols="4" md="6" lg="12" class="pa-1">
           <v-divider class="mb-3" />
-          <div class="metric-item">
-            <div class="text-caption text-grey-darken-1 mb-1">Market Cap</div>
-            <div class="text-h6 font-weight-bold text-grey-darken-3">
-              ${{ formatMarketCap(companyData.marketCap) }}
-            </div>
-          </div>
+          <KeyMetric 
+            title="Market Cap" 
+            :value="companyData.marketCap" 
+            type="number"
+            explanation="The total market value of a company's outstanding shares."
+          />
         </v-col>
+        <v-col cols="4" md="6"  class="pa-1">
+          <KeyMetric 
+            title="Volume" 
+            :value="companyData.volume" 
+            type="number"
+            explanation="The total number of shares that have been bought and sold in a specific time period."
+          />
+        </v-col>
+        
+        <v-col cols="4" md="6"  class="pa-1">
+          <KeyMetric 
+            title="Avg Volume" 
+            :value="companyData.averageVolume" 
+            type="number"
+            explanation="The average number of shares that have been bought and sold in a specific time period."
+          />
+        </v-col>
+        
+        <v-col cols="4" md="6"  class="pa-1">
+          <KeyMetric 
+            title="Beta" 
+            :value="companyData.beta" 
+            type="number"
+            explanation="A measure of a stock's volatility in relation to the market."
+          />
+        </v-col>
+        
+        <v-col cols="4" md="6"  class="pa-1">
+          <KeyMetric 
+            title="Dividend" 
+            :value="companyData.lastDividend" 
+            type="number"
+            explanation="The amount of money paid to shareholders for each share of stock."
+          />
+        </v-col>
+<!--         
+        <v-col cols="6" class="pa-1">
+          <KeyMetric 
+            title="Sector" 
+            :value="companyData.sector" 
+            type="string"
+            explanation="The industry or sector in which a company operates."
+          />
+        </v-col>
+        
+        <v-col cols="6" class="pa-1">
+          <KeyMetric 
+            title="Industry" 
+            :value="companyData.industry" 
+            type="string"
+            explanation="The industry or sector in which a company operates."
+          />
+        </v-col>
+        
+        <v-col cols="6" class="pa-1">
+          <KeyMetric 
+            title="Industry" 
+            :value="companyData.industry" 
+            type="string"
+            explanation="The industry or sector in which a company operates."
+          />
+        </v-col> -->
+      
       </v-row>
     </v-card-text>
-  </v-card>
+  </div>
 </template>
 
 <script setup lang="ts">
+import { humanizeNumberFormat } from '@/shared/helpers/formats';
 import type { CompanyData } from '@/shared/models/recomendations'
+import KeyMetric from './KeyMetric.vue'
 
 interface Props {
   companyData: CompanyData
@@ -85,28 +96,7 @@ interface Props {
 
 defineProps<Props>()
 
-// Helper functions
-const formatVolume = (volume: number): string => {
-  if (volume >= 1e9) {
-    return (volume / 1e9).toFixed(1) + 'B'
-  } else if (volume >= 1e6) {
-    return (volume / 1e6).toFixed(1) + 'M'
-  } else if (volume >= 1e3) {
-    return (volume / 1e3).toFixed(1) + 'K'
-  }
-  return volume.toString()
-}
 
-const formatMarketCap = (marketCap: number): string => {
-  if (marketCap >= 1e12) {
-    return (marketCap / 1e12).toFixed(2) + 'T'
-  } else if (marketCap >= 1e9) {
-    return (marketCap / 1e9).toFixed(2) + 'B'
-  } else if (marketCap >= 1e6) {
-    return (marketCap / 1e6).toFixed(2) + 'M'
-  }
-  return marketCap.toString()
-}
 </script>
 
 <style scoped>

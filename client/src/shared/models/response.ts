@@ -7,6 +7,7 @@ export type ApiResponse<T> = {
     ok: true;
     data: T;
     status: number;
+    total?: number;
   }
 | {
     ok: false;

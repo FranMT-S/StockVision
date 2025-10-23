@@ -3,38 +3,30 @@
     <!-- Controles superiores -->
     <div class="chart-controls">
       <div class="controls-left">
-        <button @click="toggleChartType" class="btn">
-          {{ chartType === 'candlestick' ? '📊 Candlestick' : '📈 Line' }}
+
+        <button @click="toggleChartType('candlestick')" class="btn py-2 px-4">
+          <v-icon icon="mdi-chart-waterfall" size="18" /> 
         </button>
-        <button @click="addVolume" class="btn" v-if="!showVolume">
-          📊 Mostrar Volumen
-        </button>
-        <button @click="removeVolume" class="btn" v-else>
-          ❌ Ocultar Volumen
-        </button>
-        <button @click="toggleMA" class="btn">
-          {{ showMA ? '✅ MA' : '➕ MA' }}
+        
+        <button @click="toggleChartType('line')" class="btn py-2 px-4">
+          <v-icon icon="mdi-chart-line" size="18" /> 
         </button>
       </div>
       
       <div class="controls-right">
-        <select v-model="timeframe" @change="onTimeframeChange" class="select">
-          <option value="1m">1 Minuto</option>
-          <option value="5m">5 Minutos</option>
-          <option value="15m">15 Minutos</option>
-          <option value="1h">1 Hora</option>
-          <option value="1d">1 Día</option>
-        </select>
-        
-        <button @click="zoomIn" class="btn">🔍+</button>
-        <button @click="zoomOut" class="btn">🔍-</button>
-        <button @click="resetChart" class="btn">🔄 Reset</button>
-        <button @click="takeScreenshot" class="btn">📸 Captura</button>
+        <div class="tw-flex tw-flex-row tw-items-center tw-gap-1 timeframe">
+          <button 
+          :class="{ 'tw-text-primary tw-bg-[#f5f5f5] tw-rounded': timeframe === option }"
+          v-for="option in timeframeOptions" :key="option" @click="timeframe = option" class="tw-text-[#717171] tw-p-2 tw-py-1 tw-text-[12px] tw-font-medium tw-pa-0 tw-capitalize">{{ option }}</button>
+        </div>
+        <button @click="takeScreenshot" class="btn py-2 px-4">
+          <v-icon icon="mdi-camera" size="18" /> 
+        </button>
       </div>
     </div>
 
     <!-- Indicadores de precio -->
-    <div class="price-info" v-if="currentPrice">
+    <!-- <div class="price-info" v-if="currentPrice">
       <div class="price-item">
         <span class="label">Open:</span>
         <span class="value">{{ currentPrice.open.toFixed(2) }}</span>
@@ -59,7 +51,7 @@
           {{ priceChange >= 0 ? '+' : '' }}{{ priceChange.toFixed(2) }}%
         </span>
       </div>
-    </div>
+    </div> -->
 
     <!-- Contenedor del gráfico -->
     <div ref="chartContainer" class="chart-container"></div>
@@ -77,7 +69,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch, computed } from 'vue';
+import { ref, onMounted, onUnmounted, watch, computed, ComputedRef } from 'vue';
 import { 
   createChart, 
   IChartApi, 
@@ -88,16 +80,33 @@ import {
   HistogramSeries,
   LineData,
   HistogramData,
-  MouseEventParams
+  MouseEventParams,
+  Time
 } from 'lightweight-charts';
+import { HistoricalPrice,CompanyNew} from '@/shared/models/recomendations';
 
 interface Props {
+  historicalData?: HistoricalPrice[];
+  newData?: CompanyNew[];
   data?: CandlestickData[];
   width?: number;
   height?: number;
 }
 
+enum Timeframe {
+  '1D' = '1D',
+  '1W' = '1W',
+  '1M' = '1M',
+  '6M' = '6M',
+  '1Y' = '1Y',
+  'All' = 'All'
+}
+
+const timeframeOptions = [ Timeframe['1D'], Timeframe['1W'], Timeframe['1M'],  Timeframe['6M'], Timeframe['1Y'], Timeframe['All'] ];
+
 const props = withDefaults(defineProps<Props>(), {
+  historicalData: () => [],
+  newData: () => [],
   data: () => [],
   width: 800,
   height: 500
@@ -105,68 +114,78 @@ const props = withDefaults(defineProps<Props>(), {
 
 const chartContainer = ref<HTMLElement | null>(null);
 const chartType = ref<'candlestick' | 'line'>('candlestick');
-const showVolume = ref(false);
-const showMA = ref(false);
-const timeframe = ref('1d');
+const timeframe = ref(Timeframe['All']);
 const currentPrice = ref<CandlestickData | null>(null);
 const crosshairData = ref<{ time: string; price: number | null } | null>(null);
+const visibleRange = ref<{ from: Time; to: Time } | null>(null);
 
 let chart: IChartApi | null = null;
 let mainSeries: ISeriesApi<'Candlestick'> | ISeriesApi<'Line'> | null = null;
 let volumeSeries: ISeriesApi<'Histogram'> | null = null;
-let maSeries: ISeriesApi<'Line'> | null = null;
 
-// Datos de ejemplo con volumen
-const defaultData: CandlestickData[] = [
-  { time: '2024-01-01', open: 100, high: 110, low: 95, close: 105 },
-  { time: '2024-01-02', open: 105, high: 115, low: 100, close: 112 },
-  { time: '2024-01-03', open: 112, high: 120, low: 108, close: 115 },
-  { time: '2024-01-04', open: 115, high: 118, low: 110, close: 113 },
-  { time: '2024-01-05', open: 113, high: 125, low: 112, close: 122 },
-  { time: '2024-01-08', open: 122, high: 130, low: 120, close: 128 },
-  { time: '2024-01-09', open: 128, high: 132, low: 125, close: 127 },
-  { time: '2024-01-10', open: 127, high: 135, low: 126, close: 133 },
-  { time: '2024-01-11', open: 133, high: 140, low: 130, close: 138 },
-  { time: '2024-01-12', open: 138, high: 142, low: 135, close: 137 },
-];
 
-const volumeData: HistogramData[] = [
-  { time: '2024-01-01', value: 1000000, color: '#26a69a80' },
-  { time: '2024-01-02', value: 1500000, color: '#26a69a80' },
-  { time: '2024-01-03', value: 1200000, color: '#26a69a80' },
-  { time: '2024-01-04', value: 900000, color: '#ef535080' },
-  { time: '2024-01-05', value: 1800000, color: '#26a69a80' },
-  { time: '2024-01-08', value: 2000000, color: '#26a69a80' },
-  { time: '2024-01-09', value: 1100000, color: '#ef535080' },
-  { time: '2024-01-10', value: 1600000, color: '#26a69a80' },
-  { time: '2024-01-11', value: 1700000, color: '#26a69a80' },
-  { time: '2024-01-12', value: 1300000, color: '#ef535080' },
-];
 
-// Calcular cambio de precio
+const historicalDataProcessed: ComputedRef<CandlestickData[]> = computed(() => {
+  if (!props.historicalData) return [];
+
+  return props.historicalData.map(item => {
+    return {
+      time: item.date,
+      open: item.open,
+      high: item.high,
+      low: item.low,
+      close: item.close,
+      date: new Date(item.date)
+    }
+  }).sort((a, b) => a.date.getTime() - b.date.getTime())
+}); 
+
+const chartData: ComputedRef<{seriesData: CandlestickData[], volumeData: HistogramData[]}> = computed(() => {
+  if (!props.historicalData) return {seriesData: [], volumeData: []};
+  const orderedData = props.historicalData.map((item) => {
+    return {
+      ...item,
+      time: item.date,
+      date: new Date(item.date)
+    }
+  }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  
+  const seriesData: CandlestickData[] = [];
+  const volumeData: HistogramData[] = [];
+  
+ 
+
+  for (let index = 0; index < orderedData.length; index++) {
+    const element = orderedData[index];
+    seriesData.push({
+      time: element.time,
+      open: element.open,
+      high: element.high,
+      low: element.low,
+      close: element.close,
+      color: element.close > element.open ? '#26a69a' : '#ef5350'
+    })
+
+    volumeData.push({
+      time: element.time,
+      value: element.volume,
+      color: element.close > element.open ? '#26a69a80' : '#ef535080'
+    })
+  }
+
+
+  return { seriesData, volumeData }
+}); 
+
+
+
 const priceChange = computed(() => {
   if (!currentPrice.value) return null;
   const change = ((currentPrice.value.close - currentPrice.value.open) / currentPrice.value.open) * 100;
   return change;
 });
 
-// Calcular media móvil
-const calculateMA = (data: CandlestickData[], period: number = 7): LineData[] => {
-  const ma: LineData[] = [];
-  for (let i = period - 1; i < data.length; i++) {
-    let sum = 0;
-    for (let j = 0; j < period; j++) {
-      sum += data[i - j].close;
-    }
-    ma.push({
-      time: data[i].time,
-      value: sum / period
-    });
-  }
-  return ma;
-};
 
-// Inicializar gráfico
 const initChart = () => {
   if (!chartContainer.value) return;
 
@@ -188,6 +207,9 @@ const initChart = () => {
       borderColor: '#cccccc',
       timeVisible: true,
       secondsVisible: false,
+      fixRightEdge: true,
+      fixLeftEdge: true,
+      
     },
     rightPriceScale: {
       borderColor: '#cccccc',
@@ -196,14 +218,13 @@ const initChart = () => {
 
   createMainSeries();
 
-  const dataToUse = props.data.length > 0 ? props.data : defaultData;
+  const dataToUse = historicalDataProcessed.value;
   mainSeries?.setData(dataToUse);
   
   if (dataToUse.length > 0) {
     currentPrice.value = dataToUse[dataToUse.length - 1];
   }
 
-  // Evento de crosshair
   chart.subscribeCrosshairMove((param: MouseEventParams) => {
     if (param.time && param.seriesData.get(mainSeries!)) {
       const data = param.seriesData.get(mainSeries!) as any;
@@ -219,7 +240,7 @@ const initChart = () => {
   chart.timeScale().fitContent();
 };
 
-// Crear serie principal
+
 const createMainSeries = () => {
   if (!chart) return;
 
@@ -231,47 +252,52 @@ const createMainSeries = () => {
       wickUpColor: '#26a69a',
       wickDownColor: '#ef5350',
     });
+
+    addVolume()
+    
+    
   } else {
     mainSeries = chart.addSeries(LineSeries, {
       color: '#2962FF',
       lineWidth: 2,
     });
+    
   }
 };
 
-// Cambiar tipo de gráfico
-const toggleChartType = () => {
+const toggleChartType = (_chartType: 'candlestick' | 'line') => {
   if (!chart || !mainSeries) return;
 
-  const currentData = props.data.length > 0 ? props.data : defaultData;
+  if(chartType.value === _chartType) return;
+
+  const currentData = chartData.value.seriesData;
   
   chart.removeSeries(mainSeries);
-  chartType.value = chartType.value === 'candlestick' ? 'line' : 'candlestick';
+  chartType.value = _chartType;
   createMainSeries();
 
   if (chartType.value === 'line') {
-    const lineData: LineData[] = currentData.map(d => ({
+    ;
+    const lineData: LineData[] = currentData.map((d) => ({
       time: d.time,
       value: d.close
     }));
     (mainSeries as ISeriesApi<'Line'>).setData(lineData);
+    removeVolume()
   } else {
     mainSeries?.setData(currentData);
   }
-
+  setTimeScaleView()
   chart.timeScale().fitContent();
 };
 
-// Agregar volumen
 const addVolume = () => {
-  if (!chart || showVolume.value) return;
+  if (!chart) return;
 
   volumeSeries = chart.addSeries(HistogramSeries, {
-    color: '#26a69a',
-    priceFormat: {
-      type: 'volume',
-    },
-    priceScaleId: '',
+    priceScaleId: '', // Usa una escala independiente
+    priceFormat: { type: 'volume' },
+    color: '#26a69a'
   });
 
   volumeSeries.priceScale().applyOptions({
@@ -281,55 +307,29 @@ const addVolume = () => {
     },
   });
 
-  volumeSeries.setData(volumeData);
-  showVolume.value = true;
+  chart.priceScale('').applyOptions({
+    scaleMargins: {
+      top: 0.9,   // 80% del espacio superior para las velas
+      bottom: 0,  // 20% inferior para el volumen
+    },
+  });
+ 
+  volumeSeries.setData(chartData.value.volumeData);
 };
 
-// Remover volumen
 const removeVolume = () => {
   if (!chart || !volumeSeries) return;
   chart.removeSeries(volumeSeries);
   volumeSeries = null;
-  showVolume.value = false;
+
+  chart.priceScale('').applyOptions({
+    scaleMargins: {
+      top: 1,  
+      bottom: 0, 
+    },
+  });
 };
 
-// Toggle media móvil
-const toggleMA = () => {
-  if (!chart) return;
-
-  if (showMA.value && maSeries) {
-    chart.removeSeries(maSeries);
-    maSeries = null;
-    showMA.value = false;
-  } else {
-    const currentData = props.data.length > 0 ? props.data : defaultData;
-    const maData = calculateMA(currentData, 7);
-    
-    maSeries = chart.addSeries(LineSeries, {
-      color: 'rgba(255, 152, 0, 1)',
-      lineWidth: 2,
-    });
-    
-    maSeries.setData(maData);
-    showMA.value = true;
-  }
-};
-
-// Zoom
-const zoomIn = () => {
-  chart?.timeScale().scrollToPosition(2, true);
-};
-
-const zoomOut = () => {
-  chart?.timeScale().scrollToPosition(-2, true);
-};
-
-// Reset
-const resetChart = () => {
-  chart?.timeScale().fitContent();
-};
-
-// Captura de pantalla
 const takeScreenshot = () => {
   if (!chart) return;
   const canvas = chartContainer.value?.querySelector('canvas');
@@ -347,13 +347,50 @@ const takeScreenshot = () => {
   }
 };
 
-// Cambio de timeframe
-const onTimeframeChange = () => {
-  console.log('Timeframe cambiado a:', timeframe.value);
-  // Aquí implementarías la lógica para cargar datos del nuevo timeframe
-};
+watch(timeframe, () => {
+  setTimeScaleView()
+});
 
-// Resize
+const setTimeScaleView = () => {
+ if (!chart || historicalDataProcessed.value.length === 0) return;
+  const data = historicalDataProcessed.value;
+  const lastIndex = data.length - 1;
+  
+
+  let fromIndex = 0;
+
+  switch (timeframe.value) {
+    case Timeframe['1D']:
+      fromIndex = Math.max(0, lastIndex - 1);
+      break;
+    case Timeframe['1W']:
+      fromIndex = Math.max(0, lastIndex - 7);
+      break;
+    case Timeframe['1M']:
+      fromIndex = Math.max(0, lastIndex - 30);
+      break;
+    case Timeframe['6M']:
+      fromIndex = Math.max(0, lastIndex - 180);
+      break;
+    case Timeframe['1Y']:
+      fromIndex = Math.max(0, lastIndex - 365);
+      break;
+    case Timeframe['All']:
+      fromIndex = 0;
+      break;
+  }
+
+
+
+
+  visibleRange.value = { from: data[fromIndex].time, to: data[lastIndex].time };
+
+
+
+  GoToLastStock(); 
+}
+
+
 const handleResize = () => {
   if (chart && chartContainer.value) {
     chart.applyOptions({
@@ -362,7 +399,16 @@ const handleResize = () => {
   }
 };
 
-// Watch data changes
+watch(visibleRange, () => {
+  if (chart) {
+    if (visibleRange.value) {
+      chart.timeScale().setVisibleRange(visibleRange.value);
+    } else {
+      chart.timeScale().scrollToRealTime();
+    }
+  }
+});
+
 watch(() => props.data, (newData) => {
   if (mainSeries && newData.length > 0) {
     if (chartType.value === 'line') {
@@ -376,8 +422,14 @@ watch(() => props.data, (newData) => {
     }
     currentPrice.value = newData[newData.length - 1];
     chart?.timeScale().fitContent();
+    GoToLastStock();
   }
 });
+
+const GoToLastStock = () => {
+  if (!chart) return;
+    chart.timeScale().scrollToRealTime();
+}
 
 // Lifecycle
 onMounted(() => {
@@ -394,6 +446,12 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+.timeframe button,
+.timeframe button:hover,
+.timeframe button:active {
+  outline: none;
+}
+
 .chart-wrapper {
   width: 100%;
   background: #fff;

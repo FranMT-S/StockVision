@@ -10,7 +10,9 @@ export const customFetch = async <T>(input: RequestInfo | URL, init?: RequestIni
   let response: Response;
   
   try {
-    response = await fetch(input, init);
+    response = await fetch(input, {
+      credentials:"omit",
+      ...init});
     data = await response.json();
     data.status = response.status;
     if(response.status >= 400){
@@ -34,7 +36,6 @@ export const customFetch = async <T>(input: RequestInfo | URL, init?: RequestIni
         errorType: ErrorType.INVALID_JSON,
       }
     }
-
   }
 
   return data;

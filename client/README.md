@@ -1,6 +1,6 @@
-# Hillary Clinton Emails App
+# StockVision
 
-This is the frontend application that provides the search functionality for the Hillary Clinton Emails Challenge, the mails are stored in a cockroachdb database, the data must be loaded from the indexer project.
+This is the client application that provides the UI for the StockVision project, can search tickers and view their information of ticker and news, recommendations and historical prices.
 
 ## Enviroment variables
 Create a .env file based on .env.template, fill the values with your own.
@@ -13,12 +13,19 @@ VITE_API_URL=http://localhost:8080
 ## Folder structure
 ```
 ├── assets: Assets files
-├── components: Components files
-├── constants: Constants files
-├── models: Models files
+├── features: modules of the application
+├── layout: Layout of the application
+├── pages: Pages of the application
 ├── plugins: Plugins to config the application
-├── services: Services files to handle the business logic
-├── store: pinia store files
+├── router: Router of the application
+└── shared: Shared files that are used in multiple places
+    ├──components: Components that are used in multiple places
+    ├──composables: Composables that are used in multiple places
+    ├──constants: Constants that are used in multiple places
+    ├──helpers: utilities that are used in multiple places
+    ├──models: Models business logic
+    ├──services: services utilities and implementations
+    └──store: Pinia store files
 ```
 
 ## Tech stack
@@ -29,18 +36,71 @@ VITE_API_URL=http://localhost:8080
 - UI components: vuetify
 
 ## Installation
+You can use `pnpm` or `npm` to execute the commands
+
 
 ```bash
-yarn install
+pnpm install
+```
+
+```bash
+npm install
 ```
 
 ## Run
 ```bash
-yarn dev
+pnpm run dev
+```
+
+```bash
+npm run dev
 ```
 
 ## build
 ```bash
-yarn build
+pnpm run build
 ```
+
+```bash
+npm run build
+```
+
+## Commands
+
+**Dev** runs the development server
+```bash
+pnpm run dev
+```
+
+```bash
+npm run dev
+```
+
+**Build** builds the production version of the app
+```bash
+pnpm run build
+```
+
+```bash
+npm run build
+```
+
+**Type check** check types of the code to catch errors
+```bash
+pnpm run type-check
+```
+
+```bash
+npm run type-check
+```
+
+**Preview** visualizes the production build
+```bash
+pnpm run preview
+```
+
+```bash
+npm run preview
+```
+
 

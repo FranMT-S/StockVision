@@ -6,13 +6,13 @@
       :class="{ 'sticky bottom-0': sticky}"
     >
       <v-card-text class="pa-3">
-        <v-row align="center" justify="space-between" no-gutters>          
+        <v-row align="center" justify="center" no-gutters>          
           <!-- Pagination controls -->
-          <v-col cols="12" sm="6" class="d-flex justify-end mt-2 mt-sm-0">
+          <v-col cols="12" sm="12" class="d-flex justify-center mt-2 mt-sm-0">
             <v-pagination
               v-model="currentPage"
               :length="totalPages"
-              :total-visible="7"
+              :total-visible="visiblePages"
               color="primary"
               density="compact"
               @update:model-value="handlePageChange"
@@ -25,13 +25,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { ref } from 'vue'
 
 interface Props {
   initialPage: number
   totalPages: number
   totalItems: number
   itemsPerPage: number
+  visiblePages: number
   sticky?: boolean
 }
 
@@ -40,23 +41,14 @@ interface Emits {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  sticky: false
+  sticky: false,
+  visiblePages: 6
 })
 
 const currentPage = ref(props.initialPage || 1)
 
 const emit = defineEmits<Emits>()
 
-
-// Computed properties for display
-const startItem = computed(() => {
-  return (props.initialPage - 1) * props.itemsPerPage + 1
-})
-
-const endItem = computed(() => {
-  const end = props.initialPage * props.itemsPerPage
-  return Math.min(end, props.totalItems)
-})
 
 // Handle page changes
 const handlePageChange = (page: number) => {

@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Home from '../pages/Home.vue'
-import TickersPage from '../features/tickers/pages/TickersPage.vue'
-import TickerHistoricPage from '../features/tickers/pages/TickerHistoricPage.vue'
+import TickersListPage from '../features/tickers/pages/TickersListPage.vue'
+import TickerHistoricalPricePage from '../features/tickers/pages/TickerHistoricalPricePage.vue'
 
 const routes = [
   {
@@ -12,12 +12,12 @@ const routes = [
   {
     path: '/tickers',
     name: 'Tickers',
-    component: TickersPage
+    component: TickersListPage
   },
   {
     path: '/ticker/:id',
     name: 'TickerHistoric',
-    component: TickerHistoricPage,
+    component: TickerHistoricalPricePage,
     props: true
   }
 ]

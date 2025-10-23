@@ -1,91 +1,102 @@
 <template>
-  <v-card class="company-info" elevation="2">
-    <v-card-title class="pa-4">
-      <h3 class="text-h6 font-weight-medium text-grey-darken-3">
-        Company Information
+  <div class="pa-0 ma-0 tw-flex tw-flex-col">
+    <v-card-title v-if="title" class="pa-4">
+      <h3 class="text-h6 font-weight-medium  tw-text-white dark:tw-text-[#ffffff]">
+        {{ title }}
       </h3>
     </v-card-title>
     
-    <v-card-text class="pa-4">
-      <v-list class="pa-0" density="compact">
-        <v-list-item class="px-0">
-          <template #prepend>
-            <v-icon color="grey-darken-1">mdi-domain</v-icon>
-          </template>
-          <v-list-item-title class="text-body-2 text-grey-darken-1">
-            Website
-          </v-list-item-title>
-          <v-list-item-subtitle>
-            <a 
-              :href="companyData.website" 
-              target="_blank"
-              class="text-decoration-none text-primary"
+    <div class="tw-flex tw-flex-row tw-items-center tw-justify-between">
+      <div class="tw-flex tw-flex-row tw-items-center">
+        <div>
+          <img width="60" height="60" :src="companyData.image" alt="Company Logo" class="company-logo logo tw-self-baseline">
+        </div>
+        <div class="text-h6 font-weight-medium  dark:tw-text-[#ffffff]">
+          <section>
+            {{ companyData.companyName }}
+            <span class="tw-text-[#717171] tw-text-[12px]  dark:tw-text-[#ffffff]">{{ companyData.symbol }}</span>
+          </section>
+          <section class=" tw-flex tw-flex-row tw-gap-2  ">
+            <v-chip class="tw-text-[#717171] pa-0" v-if="companyData.sector" color="secondary" size="small" variant="text" >
+              <v-tooltip text="Sector" location="top">
+                <template #activator="{ props }">
+                  <v-icon v-bind="props" icon="mdi-office-building" size="16" />
+                </template>
+              </v-tooltip>
+              {{ companyData.sector  }}
+            </v-chip>
+            <v-chip v-if="companyData.industry" class="tw-text-[#717171] pa-0" color="secondary" size="small" variant="text">
+              <v-tooltip text="Industry" location="top">
+                <template #activator="{ props }">
+                  <v-icon v-bind="props" icon="mdi-briefcase" size="16" />
+                </template>
+              </v-tooltip>
+              {{ companyData.industry }}
+            </v-chip>
+          </section>
+        </div>
+      </div>    
+      <div>
+        <v-tooltip text="Website" location="top" class="tw-self-baseline">
+          <template #activator="{ props }">
+            <a v-bind="props" :href="companyData.website" target="_blank" rel="noopener noreferrer"
             >
-              {{ companyData.website }}
+              <v-icon size="18" color="primary" icon="mdi-web"></v-icon>
             </a>
-          </v-list-item-subtitle>
-        </v-list-item>
-
-        <v-list-item class="px-0">
-          <template #prepend>
-            <v-icon color="grey-darken-1">mdi-account-tie</v-icon>
           </template>
-          <v-list-item-title class="text-body-2 text-grey-darken-1">
-            CEO
-          </v-list-item-title>
-          <v-list-item-subtitle class="text-grey-darken-3">
-            {{ companyData.ceo }}
-          </v-list-item-subtitle>
-        </v-list-item>
+        </v-tooltip>
+      </div>  
+      
+    </div>
+  
 
-        <v-list-item class="px-0">
-          <template #prepend>
-            <v-icon color="grey-darken-1">mdi-map-marker</v-icon>
-          </template>
-          <v-list-item-title class="text-body-2 text-grey-darken-1">
-            Country
-          </v-list-item-title>
-          <v-list-item-subtitle class="text-grey-darken-3">
-            {{ companyData.country }}
-          </v-list-item-subtitle>
-        </v-list-item>
+    <div class="px-4 tw-flex tw-flex-row tw-items-center tw-gap-2 mt-2">
+      <div class="tw-flex tw-flex-row tw-items-center tw-gap-2">
+        <div 
+          class="d-flex align-center tw-gap-3"
+        >
+          <h3 class="text-h5 font-weight-medium text-grey-darken-3 text-primary">
+            ${{ companyData.price.toFixed(2) }}
+          </h3>
+          <span class="text-body-2 font-weight-medium" :class="{ 'text-green-darken-2': changePriceStyles.isChangeToUp, 'text-red-darken-2': !changePriceStyles.isChangeToUp }">
+            <v-icon 
+              :icon="changePriceStyles.icon"
+              size="x-small"
+            />
+            {{ changePriceStyles.symbol }}${{ companyData.change.toFixed(2) }}
+            ({{ changePriceStyles.symbol }}{{ companyData.changePercentage.toFixed(2) }}%)
+          </span>
+        </div>
+      </div>
+      
+    </div>
 
-        <v-list-item class="px-0">
-          <template #prepend>
-            <v-icon color="grey-darken-1">mdi-bank</v-icon>
-          </template>
-          <v-list-item-title class="text-body-2 text-grey-darken-1">
-            Exchange
-          </v-list-item-title>
-          <v-list-item-subtitle class="text-grey-darken-3">
-            {{ companyData.exchange }}
-          </v-list-item-subtitle>
-        </v-list-item>
-
-        <v-list-item class="px-0">
-          <template #prepend>
-            <v-icon color="grey-darken-1">mdi-tag</v-icon>
-          </template>
-          <v-list-item-title class="text-body-2 text-grey-darken-1">
-            Symbol
-          </v-list-item-title>
-          <v-list-item-subtitle class="text-grey-darken-3">
-            {{ companyData.symbol }}
-          </v-list-item-subtitle>
-        </v-list-item>
-      </v-list>
-    </v-card-text>
-  </v-card>
+  </div>
 </template>
 
 <script setup lang="ts">
 import type { CompanyData } from '@/shared/models/recomendations'
+import { computed } from 'vue'
 
 interface Props {
+  title?: string
   companyData: CompanyData
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
+
+const changePriceStyles = computed(() => {
+  const symbol = props.companyData.change >= 0 ? '+' : ''
+  const icon = props.companyData.change >= 0 ? 'mdi-trending-up' : 'mdi-trending-down'
+  const isChangeToUp = props.companyData.change >= 0
+  return {
+    symbol,
+    changePercentage: props.companyData.changePercentage,
+    icon,
+    isChangeToUp
+  }
+})
+
 </script>
 
 <style scoped>
@@ -93,6 +104,10 @@ defineProps<Props>()
   border-radius: 16px;
   background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
   border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.logo {
+  mix-blend-mode: multiply;
 }
 
 /* Dark theme support */

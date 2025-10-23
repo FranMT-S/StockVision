@@ -8,15 +8,7 @@
   </head>
   <body>
     <div id="app"></div>
-    <script>
-      (async () => {
-        try {
-          await import('/env.js')
-        } catch (e) {
-          console.warn('env.js not found — skipping...')
-        }
-      })()
-    </script>
+    <script src="/env.js"></script>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

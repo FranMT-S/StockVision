@@ -1,52 +1,58 @@
 <template>
-  <v-table class="recommendations-table" >
-    <thead>
+  <v-table class="recommendations-table"  density="comfortable">
+    <thead class="h-12">
       <tr class="text-center">
         <th class="text-left font-weight-bold text-grey-darken-2 ps-14 py-1">Stock</th>
         <th class="text-left font-weight-bold text-grey-darken-2 pa-1">Price</th>
         <th class="text-left font-weight-bold text-grey-darken-2 pa-1">Change</th>
         <th class="text-center font-weight-bold text-grey-darken-2 pa-1">Sentiment</th>
+        <th class="text-center font-weight-bold text-grey-darken-2 pa-1">Last Rating Date</th>
       </tr>
     </thead>
     <tbody>
       <tr 
-        v-for="stock in stockData" 
+        v-for="stock in rows" 
         :key="stock.ticker"
         class="stock-row"
         @click="handleRowClick(stock)"
       >
-        <!-- Stock Column -->
-        <td class="pa-2">
+        <td class="pa-2 py-0">
           <div class="d-flex align-center">
+            
             <v-avatar 
               size="32" 
               class="mr-3"
               :color="getAvatarColor(stock.ticker)"
             >
-              <span class="text-white font-weight-bold text-caption">
-                {{ getCompanyInitials(stock.companyName) }}
-              </span>
+            <v-img
+              v-if="stock.url"
+              :src="stock.url"
+              :alt="stock.companyName"
+              class="rounded"
+            />
+            <span v-else class="text-white font-weight-bold text-caption">
+              {{ getCompanyInitials(stock.companyName) }}
+            </span>
             </v-avatar>
             <div>
-              <div class="text-body-2 font-weight-medium text-grey-darken-3">
-                {{ stock.companyName }}
+              <div class="tw-flex tw-gap-2 tw-items-baseline font-weight-medium text-grey-darken-3">
+                <span class="tw-text-[15px]">{{ stock.companyName }}</span>
+                <span class="tw-text-[12px] tw-text-gray-500">{{ stock.ticker }}</span>
               </div>
-              <div class="text-caption text-grey-darken-1">
-                {{ stock.ticker }}
-              </div>
+        
             </div>
           </div>
         </td>
 
         <!-- Price Column -->
-        <td class="text-left pa-2">
-          <div class="text-body-2 font-weight-medium text-grey-darken-3">
+        <td class="text-left pa-2 py-0">
+          <div class="text-body-2 tw-text-[15px] font-weight-medium text-grey-darken-3">
             ${{ stock.price.toFixed(2) }}
           </div>
         </td>
 
         <!-- Change Column -->
-        <td class="text-left pa-2">
+        <td class="text-left pa-2 py-0">
           <div 
             class="d-flex align-center"
             :class="getChangeColorClass(stock.change)"
@@ -56,7 +62,7 @@
               size="x-small"
               class="mr-1"
             />
-            <span class="text-body-2 font-weight-medium">
+            <span class="text-body-2 tw-text-[15px] font-weight-medium">
               {{ stock.change >= 0 ? '+' : '' }}${{ stock.change.toFixed(2) }}
               ({{ stock.change >= 0 ? '+' : '' }}{{ stock.changePercentage.toFixed(2) }}%)
             </span>
@@ -64,7 +70,7 @@
         </td>
 
         <!-- Sentiment Column -->
-        <td class="text-center pa-2">
+        <td class="text-center pa-2 py-0">
           <v-avatar size="24">
             <v-icon 
               :icon="getSentimentIcon(stock.sentiment)"
@@ -73,27 +79,34 @@
             />
           </v-avatar>
         </td>
+
+        <td class="text-center pa-2 py-0">
+         {{ getDateString(stock.lastRatingDate) }}
+        </td>
       </tr>
     </tbody>
   </v-table>
 </template>
 
 <script setup lang="ts">
-interface StockData {
+
+export interface TickerRow {
   ticker: string
   companyName: string
   price: number
+  url?: string
   change: number
   changePercentage: number
   sentiment: string
+  lastRatingDate: string | Date
 }
 
 interface Props {
-  stockData: StockData[]
+  rows: TickerRow[]
 }
 
 interface Emits {
-  (e: 'rowClick', stock: StockData): void
+  (e: 'rowClick', stock: TickerRow): void
 }
 
 defineProps<Props>()
@@ -124,9 +137,23 @@ const getSentimentIcon = (sentiment: string): string => {
       return 'mdi-emoticon-happy'
     case 'negative':
       return 'mdi-emoticon-sad'
-    default:
+    case 'neutral':
       return 'mdi-emoticon-neutral'
+    default:
+      return ''
   }
+}
+
+const getDateString = (date: string | Date): string => {
+  if (!date) return '';
+
+  const d = new Date(date);
+
+  if (isNaN(d.getTime())) {
+    return 'Not available';
+  }
+
+  return d.toLocaleDateString();
 }
 
 const getSentimentColor = (sentiment: string): string => {
@@ -140,7 +167,7 @@ const getSentimentColor = (sentiment: string): string => {
   }
 }
 
-const handleRowClick = (stock: StockData) => {
+const handleRowClick = (stock: TickerRow) => {
   emit('rowClick', stock)
 }
 </script>
@@ -152,6 +179,7 @@ const handleRowClick = (stock: StockData) => {
 }
 
 .stock-row {
+  height: 18px!important;
   border-bottom: 1px solid #e0e0e0;
   cursor: pointer;
   transition: background-color 0.2s ease;
@@ -173,4 +201,16 @@ const handleRowClick = (stock: StockData) => {
   font-size: 0.875rem !important;
   line-height: 1.25rem !important;
 }
+
+/* :deep(.recommendations-table td),
+:deep(.recommendations-table th) {
+  padding-top: 2px !important;
+  padding-bottom: 2px !important;
+  height: 22px !important;
+  line-height: 1rem !important;
+}
+
+.stock-row {
+  height: 18px!important;
+} */
 </style>

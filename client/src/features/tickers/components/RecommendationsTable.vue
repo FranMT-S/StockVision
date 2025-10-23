@@ -25,7 +25,7 @@
           >
             <td class="pa-3">
               <div class="text-body-2 font-weight-medium text-grey-darken-3">
-                {{ recommendation?.brokerage }}
+                {{ recommendation?.brokerage.name }}
               </div>
             </td>
             
@@ -78,10 +78,10 @@
 </template>
 
 <script setup lang="ts">
-import type { Recomendation } from '@/shared/models/recomendations'
+import type { Recommendation } from '@/shared/models/recomendations'
 
 interface Props {
-  recommendations: (Recomendation | undefined)[]
+  recommendations: (Recommendation | undefined)[]
 }
 
 defineProps<Props>()

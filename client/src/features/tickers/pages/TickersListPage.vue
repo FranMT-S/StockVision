@@ -4,9 +4,9 @@
       <!-- Header Section -->
       <div class="mb-3">
         <div class="d-flex align-center mb-2">
-          <h1 class="text-h5 font-weight-bold text-grey-darken-3 mr-3">
+          <h2 class="text-h5 font-weight-bold text-grey-darken-3 mr-3">
             Company Stock Prices
-          </h1>
+          </h2>
           <v-progress-circular
             v-if="loading"
             indeterminate
@@ -24,13 +24,13 @@
           <StockTableSkeleton v-if="loading" :rows="10" />
           
           <!-- Error State -->
-          <ErrorFetchData v-else-if="error" :error="error" class="pa-8 text-center" @click="tickersStore.fetchStockData()"/> 
+          <ErrorFetchData v-else-if="error" :error="error" class="pa-8 text-center" @click="tickersStore.fetchTickers()"/> 
        
           <!-- Data State -->
           <TickersTable 
-            v-else-if="stockData.length > 0" 
-            height="calc(100vh - 200px)"
-            :stock-data="paginatedStockData"
+            v-else-if="tableRows.length > 0" 
+            style="max-height: calc(100vh - 200px)"
+            :rows="tableRows"
             @row-click="handleStockClick"
           />
 
@@ -49,11 +49,12 @@
 
       <!-- Paginator -->
       <Paginator
-        v-if="!loading && !error && stockData.length > 0"
-        :initial-page="currentPage"
-        :total-pages="totalPages"
+        v-if="!loading && !error && tableRows.length > 0"
+        :total-pages="100"
         :total-items="totalItems"
         :items-per-page="itemsPerPage"
+        :visible-pages="visiblePages"
+        :initial-page="page"
         sticky
         class="mt-4"
         @update:current-page="handlePageChange"
@@ -63,30 +64,74 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ComputedRef, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useTickersStore } from '../store/tickersStore'
 import StockTableSkeleton from '@/shared/components/StockTableSkeleton.vue'
 import ErrorFetchData from '@/shared/components/ErrorFetchData.vue'
-import TickersTable from '../components/TickersTable.vue'
+import TickersTable, {  TickerRow } from '../components/TickersTable.vue'
 import Paginator from '@/shared/components/Paginator.vue'
+import { useBreakpoints } from '@/shared/composables/useBreakpoints'
+import { storeToRefs } from 'pinia'
 
 const router = useRouter()
 const tickersStore = useTickersStore()
+const {tickers} = storeToRefs(tickersStore)
 
 // Initialize data when component mounts
-tickersStore.fetchStockData()
+tickersStore.fetchTickers()
 
 // Computed properties
 const stockData = computed(() => tickersStore.stockData)
-const paginatedStockData = computed(() => tickersStore.paginatedStockData)
 const loading = computed(() => tickersStore.loading)
 const error = computed(() => tickersStore.error)
-const currentPage = computed({
-  get: () => tickersStore.currentPage,
-  set: (value: number) => tickersStore.setCurrentPage(value)
+const page = computed(() => tickersStore.currentPage)
+const size = computed(() => tickersStore.itemsPerPage)
+
+const tableRows: ComputedRef<TickerRow[]> = computed(() => {
+  let rows: TickerRow[] = []
+  
+  tickers.value.map(({companyData, ticker}) => {
+    console.log(ticker.recommendations?.[0].time)
+    rows.push({
+      ticker: ticker.id,
+      companyName: companyData.companyName,
+      price: companyData.price,
+      url: companyData.image,
+      change: companyData.change,
+      changePercentage: companyData.changePercentage,
+      sentiment: ticker.sentiment,
+      lastRatingDate: ticker.recommendations?.[0].time || 'Not available'
+    })  
+  })
+
+
+  return rows
 })
-const totalPages = computed(() => tickersStore.totalPages)
+
+
+const { isMobile, isTablet, current } = useBreakpoints()
+const visiblePages = computed(() => {
+  if (isMobile.value) {
+    return 6
+  }
+
+  if (isTablet.value) {
+    return 8
+  }
+
+  if(current.value === 'md') {
+    return 12
+  }
+
+  if(current.value === 'lg') {
+    return 16
+  }
+
+  
+  return 20
+})
+
 const totalItems = computed(() => tickersStore.totalItems)
 const itemsPerPage = computed(() => tickersStore.itemsPerPage)
 
@@ -96,9 +141,10 @@ const handleStockClick = (stock: any) => {
   router.push(`/ticker/${stock.ticker}`)
 }
 
-const handlePageChange = (page: number) => {
-  tickersStore.setCurrentPage(page)
+const handlePageChange = (newPage: number) => {
+  tickersStore.currentPage = newPage
 }
+
 </script>
 
 <style scoped>

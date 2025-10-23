@@ -3,7 +3,17 @@
 export const API_CONFIG = {
   BASE_URL: window.__ENV__?.VITE_API_URL || import.meta.env.VITE_API_URL || 'http://localhost:8080',
   ENDPOINTS: {
-    MAILS: '/api/mails/search',
+    List: function(id:string = '',page:number = 1,size: number = 10,sort: 'asc' | 'desc' = 'asc'){
+      const idParam = id ? `&id=${id}` : ''
+
+      return `/api/v1/tickers?page=${page}&size=${size}&sort=${sort}${idParam}`
+    },
+    Overview: function(id: string){
+      return `/api/v1/tickers/${id}/overview`
+    },
+    Logo: function(id: string){
+      return `/api/v1/tickers/${id}/logo`
+    },
   },
 };
 
