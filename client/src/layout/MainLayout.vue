@@ -26,19 +26,26 @@
           
           <!-- Search Bar -->
           <v-col cols="12" sm="8" md="6" lg="4" class="ml-4">
-            <v-text-field
-              v-model="searchQuery"
-              placeholder="Search stocks, companies..."
-              variant="outlined"
-              density="compact"
-              hide-details
-              prepend-inner-icon="mdi-magnify"
-              clearable
-              class="search-field"
-              bg-color="white"
-              color="primary"
-              @input="handleSearch"
-            >
+           <v-text-field
+            v-model="searchQuery"
+            placeholder="Search by id or ticker..."
+            variant="outlined"
+            density="compact"
+            hide-details
+            clearable
+            class="search-field"
+            bg-color="white"
+            color="primary"
+            @keyup.enter="handleSearch"
+          >
+            <template #prepend-inner>
+              <v-icon
+                class="cursor-pointer"
+                @click="handleSearch"
+              >
+                mdi-magnify
+              </v-icon>
+            </template>
               <template #append-inner>
                 <v-progress-circular
                   v-if="searchLoading"
@@ -90,27 +97,29 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import ToggleTheme from '@shared/components/ToggleTheme.vue'
+import { useRouter } from 'vue-router'
+import { useRoute } from 'vuetify/lib/composables/router.mjs'
 
-const searchQuery = ref('')
+
+const router = useRouter()
+const route = useRoute()
+const searchQuery = ref(route.value?.query?.q?.toString() || '')
 const searchLoading = ref(false)
 
+watch(() => route.value?.query?.q, (newQuery) => {
+  searchQuery.value = newQuery?.toString() || ''
+})
+
 // Handle search functionality
-const handleSearch = async () => {
+const handleSearch =  () => {
   if (!searchQuery.value.trim()) return
   
   searchLoading.value = true
   
   try {
-    // Simulate search delay
-    await new Promise(resolve => setTimeout(resolve, 800))
-    
-    // TODO: Implement actual search functionality
-    console.log('Searching for:', searchQuery.value)
-    
-    // In a real app, this would trigger navigation or filter results
-    // For now, we'll just log the search
+    router.push(`/tickers?q=${searchQuery.value}`)
   } catch (error) {
     console.error('Search error:', error)
   } finally {

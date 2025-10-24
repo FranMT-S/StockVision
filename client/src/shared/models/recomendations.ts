@@ -76,6 +76,7 @@ export interface CompanyOverview {
   recommendations:Recommendation[],
   historicalPrices:HistoricalPrice[],
   companyNews:CompanyNew[]
+  advice: string;
 }
 
 export interface TickerListResponse{

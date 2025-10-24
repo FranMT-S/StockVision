@@ -50,11 +50,11 @@
       <!-- Paginator -->
       <Paginator
         v-if="!loading && !error && tableRows.length > 0"
-        :total-pages="100"
+        :total-pages="totalPages"
         :total-items="totalItems"
         :items-per-page="itemsPerPage"
         :visible-pages="visiblePages"
-        :initial-page="page"
+        :initial-page="currentPage"
         sticky
         class="mt-4"
         @update:current-page="handlePageChange"
@@ -64,7 +64,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ComputedRef, ref } from 'vue'
+import { computed, ComputedRef, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useTickersStore } from '../store/tickersStore'
 import StockTableSkeleton from '@/shared/components/StockTableSkeleton.vue'
@@ -73,26 +73,35 @@ import TickersTable, {  TickerRow } from '../components/TickersTable.vue'
 import Paginator from '@/shared/components/Paginator.vue'
 import { useBreakpoints } from '@/shared/composables/useBreakpoints'
 import { storeToRefs } from 'pinia'
+import { useRoute } from 'vue-router'
 
 const router = useRouter()
+const route = useRoute();
 const tickersStore = useTickersStore()
-const {tickers} = storeToRefs(tickersStore)
+const {tickers, totalPages, totalItems,loading,error,currentPage,itemsPerPage,search} = storeToRefs(tickersStore)
 
-// Initialize data when component mounts
-tickersStore.fetchTickers()
+itemsPerPage.value = 3
 
-// Computed properties
-const stockData = computed(() => tickersStore.stockData)
-const loading = computed(() => tickersStore.loading)
-const error = computed(() => tickersStore.error)
-const page = computed(() => tickersStore.currentPage)
-const size = computed(() => tickersStore.itemsPerPage)
+onMounted(() => {
+  search.value = route.query.q?.toString() || ''
+  if(!search.value){
+    tickersStore.fetchTickers()
+  }
+})
+
+watch(
+  () => route.query,
+  (newQuery) => {
+    console.log("newQuery",newQuery)
+    tickersStore.currentPage = Number(newQuery.page) || 1;
+    tickersStore.search = String(newQuery.q) || '';
+  },
+  { deep: true }
+);
 
 const tableRows: ComputedRef<TickerRow[]> = computed(() => {
   let rows: TickerRow[] = []
-  
   tickers.value.map(({companyData, ticker}) => {
-    console.log(ticker.recommendations?.[0].time)
     rows.push({
       ticker: ticker.id,
       companyName: companyData.companyName,
@@ -105,35 +114,20 @@ const tableRows: ComputedRef<TickerRow[]> = computed(() => {
     })  
   })
 
-
   return rows
 })
 
 
 const { isMobile, isTablet, current } = useBreakpoints()
 const visiblePages = computed(() => {
-  if (isMobile.value) {
-    return 6
-  }
-
-  if (isTablet.value) {
-    return 8
-  }
-
-  if(current.value === 'md') {
-    return 12
-  }
-
-  if(current.value === 'lg') {
-    return 16
-  }
-
+  if (isMobile.value)  return 6
+  if (isTablet.value)  return 8
+  if(current.value === 'md')  return 12
+  if(current.value === 'lg')  return 16
   
   return 20
 })
 
-const totalItems = computed(() => tickersStore.totalItems)
-const itemsPerPage = computed(() => tickersStore.itemsPerPage)
 
 // Event handlers
 const handleStockClick = (stock: any) => {

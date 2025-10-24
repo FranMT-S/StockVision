@@ -120,8 +120,11 @@ const fetchTickerData = async () => {
     companyData: companyOverview.value?.companyData,
     recommendations: companyOverview.value?.recommendations,
     companyNews: companyOverview.value?.companyNews,
-    historicalPrices: companyOverview.value?.historicalPrices
+    historicalPrices: companyOverview.value?.historicalPrices,
+    advice: companyOverview.value?.advice
   }
+
+  console.log(tickerData.value)
 
   loading.value = false
 }
