@@ -21,6 +21,11 @@ GET {{url}}/tickers/AAPL/overview
 Accept: application/json
 Content-Type: application/json
 
+### Ticker predictions
+GET {{url}}/tickers/AAPL/predictions
+Accept: application/json
+Content-Type: application/json
+
 ### Ticker logo
 GET {{url}}/tickers/AAPL/logo
 Content-Type: application/json

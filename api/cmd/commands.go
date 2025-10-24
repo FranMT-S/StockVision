@@ -67,8 +67,8 @@ func fillDb(cmd *cobra.Command, args []string) error {
 
 // cleanAndPrepareEntities cleans and prepares the entities for insertion and remove the brokerages with empty name
 func cleanAndPrepareEntities(stockRecommendations []services.StockRecommendation) ([]models.Ticker, []models.Brokerage) {
-	var brokerages []models.Brokerage
-	var tickers []models.Ticker
+	var brokerages []models.Brokerage = make([]models.Brokerage, 0)
+	var tickers []models.Ticker = make([]models.Ticker, 0)
 	var brokeragesMap = make(map[string]bool)
 	var tickersMap = make(map[string]bool)
 
@@ -112,7 +112,7 @@ func createBrokeragesWithIdsMap(brokerages []models.Brokerage) map[string]uint {
 }
 
 func createRecommendations(stockRecommendations []services.StockRecommendation, brokeragesWithIdsMap map[string]uint) []models.Recommendation {
-	var recommendations []models.Recommendation
+	var recommendations []models.Recommendation = make([]models.Recommendation, 0)
 	for _, recommendation := range stockRecommendations {
 
 		parsedTime, err := ParseTimeNanoToRFC3339(recommendation.Time)

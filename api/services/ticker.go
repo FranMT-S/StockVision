@@ -6,6 +6,7 @@ import (
 	"api/models"
 	"api/models/filters"
 	"api/models/ratings"
+	"fmt"
 	"strings"
 	"time"
 
@@ -75,6 +76,7 @@ func (s *tickerService) GetTickers(ctx context.Context, filter filters.Filters) 
 		cacheKey = "" // no cache
 	}
 
+	// get total items
 	total, err = cache.GetOrLoad(ctx, s.cache, cacheKey, 30*time.Minute, func() (int64, error) {
 		var total int64
 		err = query.Count(&total).Error
@@ -82,30 +84,31 @@ func (s *tickerService) GetTickers(ctx context.Context, filter filters.Filters) 
 	})
 
 	query = query.Scopes(scopes.SortCompany(filter.Sort), scopes.Pagination(filter.Page, filter.PageSize))
-
 	err = query.Preload("Recommendations.Brokerage").Find(&tickers).Error
 
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, fmt.Errorf("[TickerService] failed to retrieve tickers: %w", err)
 	}
 
-	var ratingCollection ratings.RatingCollection
-
+	// calculate sentiment for each ticker
 	for i := range tickers {
 		if tickers[i].Recommendations == nil {
-			ratingCollection = ratings.RatingCollection{}
 			continue
 		}
-
-		for j := range tickers[i].Recommendations {
-			ratingCollection = append(ratingCollection, ratings.Rating(tickers[i].Recommendations[j].RatingTo))
-		}
-
-		tickerSentiment := ratingCollection.CalculateSentiment()
+		tickerSentiment := createRatingCollection(tickers[i].Recommendations).CalculateSentiment()
 		tickers[i].Sentiment = tickerSentiment.Sentiment
 	}
 
 	return tickers, total, err
+}
+
+func createRatingCollection(recommendations []models.Recommendation) ratings.RatingCollection {
+	var ratingCollection ratings.RatingCollection
+	for j := range recommendations {
+		ratingCollection = append(ratingCollection, ratings.Rating(recommendations[j].RatingTo))
+	}
+
+	return ratingCollection
 }
 
 // GetTickerByID implements TickerService interface
@@ -118,14 +121,14 @@ func (s *tickerService) GetTickerByID(ctx context.Context, id string) (*models.T
 		First(&ticker).Error
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("[TickerService] failed to retrieve ticker by id: %s: %w", id, err)
 	}
 
 	var ratingCollection ratings.RatingCollection
 
 	for i := range ticker.Recommendations {
 		if ticker.Recommendations[i].Brokerage.Name == "" {
-			ticker.Recommendations[i].Brokerage.Name = "Anonimous"
+			ticker.Recommendations[i].Brokerage.Name = "Anonymous"
 		}
 
 		ratingCollection = append(ratingCollection, ratings.Rating(ticker.Recommendations[i].RatingTo))

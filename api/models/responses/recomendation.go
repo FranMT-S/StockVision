@@ -14,9 +14,5 @@ type CompanyOverview struct {
 	Recommendations  []models.Recommendation  `json:"recommendations"`
 	HistoricalPrices []models.HistoricalPrice `json:"historicalPrices"`
 	CompanyNews      []models.CompanyNew      `json:"companyNews"`
-}
-
-type PredictResponse struct {
-	Advice         string                   `json:"advice"`
-	StocksNextWeek []models.HistoricalPrice `json:"stocksNextWeek"`
+	Advice           string                   `json:"advice"`
 }

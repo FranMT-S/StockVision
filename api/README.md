@@ -95,6 +95,10 @@ GET /api/v1/tickers/AAPL/overview
 ```
 
 ``` http
+GET /api/v1/tickers/AAPL/predictions
+```
+
+``` http
 GET /api/v1/tickers/AAPL/logo
 ```
 

@@ -8,6 +8,7 @@ import (
 	apilogger "api/logger"
 	"api/models"
 	"api/server"
+	"fmt"
 )
 
 func main() {
@@ -19,12 +20,12 @@ func main() {
 	// Setup routes
 	db, err := database.GetDB()
 	if err != nil {
-		panic(err)
+		panic(fmt.Errorf("error getting db: %v", err))
 	}
 
 	cache, err := cache.NewReddis()
 	if err != nil {
-		panic(err)
+		panic(fmt.Errorf("error getting cache db: %v", err))
 	}
 
 	defer db.Close()

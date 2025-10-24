@@ -13,7 +13,7 @@ func SetupRoutes(router *chi.Mux, config *models.ServerConfig) {
 	tickerService := services.NewTickerService(config.DB, config.Cache)
 
 	// Initialize controllers
-	tickersController := controllers.NewTickersController(tickerService)
+	tickersController := controllers.NewTickersController(tickerService, config.Cache)
 
 	// API v1 routes
 	router.Route("/api/v1", func(r chi.Router) {
@@ -21,5 +21,6 @@ func SetupRoutes(router *chi.Mux, config *models.ServerConfig) {
 		r.Get("/tickers", tickersController.ListTickers)
 		r.Get("/tickers/{id}/logo", tickersController.GetTickerLogo)
 		r.Get("/tickers/{id}/overview", tickersController.GetTickerOverview)
+		r.Get("/tickers/{id}/predictions", tickersController.GetTickerPredictions)
 	})
 }

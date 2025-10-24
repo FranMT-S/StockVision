@@ -1,13 +1,17 @@
 package controllers
 
 import (
+	"api/cache"
 	apilogger "api/logger"
 	"api/models"
 	"api/models/filters"
 	"api/models/responses"
 	"api/services"
+	"api/services/geminiai"
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -21,12 +25,14 @@ import (
 // TickersController handles stock-related operations
 type TickersController struct {
 	tickerService services.TickerService
+	cache         cache.ICache
 }
 
 // NewTickersController creates a new tickerController
-func NewTickersController(tickerService services.TickerService) TickersController {
+func NewTickersController(tickerService services.TickerService, cache cache.ICache) TickersController {
 	return TickersController{
 		tickerService: tickerService,
+		cache:         cache,
 	}
 }
 
@@ -83,6 +89,7 @@ func (c *TickersController) ListTickers(w http.ResponseWriter, r *http.Request) 
 	}
 
 	var wg sync.WaitGroup
+	// Get company data
 	for i, rec := range recomendations {
 		wg.Add(1)
 
@@ -90,7 +97,7 @@ func (c *TickersController) ListTickers(w http.ResponseWriter, r *http.Request) 
 			defer wg.Done()
 			companyData, err := c.tickerService.GetCompanyData(ctxCancel, string(r.Ticker.ID))
 			if err != nil {
-				apilogger.Logger().Error().Err(err).Msg("Failed to retrieve ticker with ID:" + string(r.Ticker.ID))
+				apilogger.Logger().Error().Err(err).Msg("[ListTickers] Failed to retrieve company data with ID:" + string(r.Ticker.ID))
 			}
 
 			recomendations[index].CompanyData = companyData
@@ -126,7 +133,7 @@ func (c *TickersController) GetTickerOverview(w http.ResponseWriter, r *http.Req
 			return
 		}
 
-		apilogger.Logger().Error().Err(err).Msg("Failed to retrieve ticker with ID:" + id)
+		apilogger.Logger().Error().Err(err).Msg("[GetTickerOverview] Failed to retrieve ticker with ID:" + id)
 		respondError(w, http.StatusInternalServerError, "Failed to retrieve ticker")
 		return
 	}
@@ -140,7 +147,7 @@ func (c *TickersController) GetTickerOverview(w http.ResponseWriter, r *http.Req
 		defer wg.Done()
 		companyData, err := c.tickerService.GetCompanyData(ctxCancel, id)
 		if err != nil {
-			apilogger.Logger().Error().Err(err).Msg("Failed to retrieve company data with ID:" + id)
+			apilogger.Logger().Error().Err(err).Msg("[GetTickerOverview] Failed to retrieve company data with ID:" + id)
 			tickerOverview.CompanyData = models.CompanyData{}
 			return
 		}
@@ -153,11 +160,20 @@ func (c *TickersController) GetTickerOverview(w http.ResponseWriter, r *http.Req
 		defer wg.Done()
 		historicalPrices, err := c.tickerService.GetHistoricalPrices(ctxCancel, id, "", "")
 		if err != nil {
-			apilogger.Logger().Error().Err(err).Msg("Failed to retrieve historical prices with ID:" + id)
+			apilogger.Logger().Error().Err(err).Msg("[GetTickerOverview] Failed to retrieve historical prices with ID:" + id)
 			tickerOverview.HistoricalPrices = []models.HistoricalPrice{}
 			return
 		}
 
+		var advice string
+
+		advice, err = geminiai.GenerateAdvice(id, historicalPrices, 20, c.cache)
+		if err != nil {
+			apilogger.Logger().Error().Err(err).Msg("[GetTickerOverview] Failed to retrieve stock analysis with ID:" + id)
+			advice = ""
+		}
+
+		tickerOverview.Advice = advice
 		tickerOverview.HistoricalPrices = historicalPrices
 	}()
 
@@ -167,7 +183,7 @@ func (c *TickersController) GetTickerOverview(w http.ResponseWriter, r *http.Req
 		defer wg.Done()
 		companyNews, err := c.tickerService.GetNews(ctxCancel, id, "", "")
 		if err != nil {
-			apilogger.Logger().Error().Err(err).Msg("Failed to retrieve company news with ID:" + id)
+			apilogger.Logger().Error().Err(err).Msg("[GetTickerOverview] Failed to retrieve company news with ID:" + id)
 			tickerOverview.CompanyNews = []models.CompanyNew{}
 			return
 		}
@@ -177,6 +193,56 @@ func (c *TickersController) GetTickerOverview(w http.ResponseWriter, r *http.Req
 
 	respondJSON(w, http.StatusOK, map[string]interface{}{
 		"data": tickerOverview,
+	})
+}
+
+// GetTickerPredictions retrieves 7 days of predictions for a ticker
+// Path param: id (string)
+func (c *TickersController) GetTickerPredictions(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+
+	var predicts []models.HistoricalPrice = make([]models.HistoricalPrice, 0)
+	ctxCancel, cancelManual := context.WithTimeout(r.Context(), 60*time.Second)
+	defer cancelManual()
+
+	if id == "" {
+		respondError(w, http.StatusBadRequest, "Ticker ID is required")
+		return
+	}
+
+	_, err := c.tickerService.GetTickerByID(ctxCancel, id)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			respondError(w, http.StatusNotFound, "Ticker not found")
+			return
+		}
+
+		apilogger.Logger().Error().Err(err).Msg("[GetTickerPredictions] Failed to retrieve ticker with ID:" + id)
+		respondError(w, http.StatusInternalServerError, "Failed to retrieve ticker")
+		return
+	}
+
+	now := time.Now().Format("2006-01-02")
+	// 45 days before, not all days have stock data, so we use 45 days
+	before := time.Now().AddDate(0, 0, -45).Format("2006-01-02")
+
+	historicalPrices, err := c.tickerService.GetHistoricalPrices(ctxCancel, id, before, now)
+	fmt.Println(len(historicalPrices))
+	if err != nil {
+		apilogger.Logger().Error().Err(err).Msg("[GetTickerPredictions] Failed to retrieve historical prices with ID:" + id)
+		respondError(w, http.StatusInternalServerError, "Failed in generate predictions, try again later")
+		return
+	}
+
+	predicts, err = geminiai.GeneratePredict(id, historicalPrices, 20, 7, c.cache)
+	if err != nil {
+		apilogger.Logger().Error().Err(err).Msg("[GetTickerPredictions] Failed to retrieve stock analysis with ID:" + id)
+		respondError(w, http.StatusInternalServerError, "Failed in generate predictions, try again later")
+		return
+	}
+
+	respondJSON(w, http.StatusOK, map[string]interface{}{
+		"data": predicts,
 	})
 }
 

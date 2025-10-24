@@ -21,13 +21,12 @@ type FinancialCacheExpiration struct {
 // Normalize normalizes the cache expiration values  in case of invalid values
 func (f FinancialCacheExpiration) Normalize() FinancialCacheExpiration {
 	if f.HistoricalPrices <= 0 {
-		// f.HistoricalPrices = 10 * time.Minute
-		f.HistoricalPrices = 60 * time.Minute
+		f.HistoricalPrices = 10 * time.Minute
+
 	}
 
 	if f.CompanyData <= 0 {
-		// f.CompanyData = 30 * time.Minute
-		f.CompanyData = 60 * time.Minute
+		f.CompanyData = 30 * time.Minute
 	}
 
 	return f
@@ -81,7 +80,7 @@ func (s *FinancialService) GetHistoricalPrices(ctx context.Context, ticker strin
 		if err := s.client.Get("/stable/historical-price-eod/full", params, &historicalPrices); err != nil {
 			return nil, fmt.Errorf("[FinancialService] failed to retrieve historical prices id: %s: %w", ticker, err)
 		}
-		fmt.Println("Historical prices retrieved from API")
+
 		return historicalPrices, nil
 	})
 
