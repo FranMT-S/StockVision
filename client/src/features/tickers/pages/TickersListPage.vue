@@ -80,8 +80,6 @@ const route = useRoute();
 const tickersStore = useTickersStore()
 const {tickers, totalPages, totalItems,loading,error,currentPage,itemsPerPage,search} = storeToRefs(tickersStore)
 
-itemsPerPage.value = 3
-
 onMounted(() => {
   search.value = route.query.q?.toString() || ''
   if(!search.value){
