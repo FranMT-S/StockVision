@@ -7,11 +7,11 @@
     </v-card-title>
     
     <div class="tw-flex tw-flex-row tw-items-center tw-justify-between">
-      <div class="tw-flex tw-flex-row tw-items-center">
+      <div class="tw-flex tw-flex-row tw-items-center tw-w-full">
         <div>
           <img width="60" height="60" :src="companyData.image" alt="Company Logo" class="company-logo logo tw-self-baseline">
         </div>
-        <div class="text-h6 font-weight-medium  dark:tw-text-[#ffffff]">
+        <div class="text-h6 font-weight-medium  dark:tw-text-[#ffffff] tw-w-full">
           <section>
             {{ companyData.companyName }}
             <span class="tw-text-[#717171] tw-text-[12px]  dark:tw-text-[#ffffff]">{{ companyData.symbol }}</span>
@@ -31,13 +31,13 @@
                   <v-icon v-bind="props" icon="mdi-briefcase" size="16" />
                 </template>
               </v-tooltip>
-              {{ companyData.industry }}
+              <p class="tw-break-words">{{ companyData.industry }}</p>
             </v-chip>
           </section>
         </div>
       </div>    
-      <div>
-        <v-tooltip text="Website" location="top" class="tw-self-baseline">
+      <div class="tw-self-baseline">
+        <v-tooltip text="Website" location="top" class="tw-self-baseline ">
           <template #activator="{ props }">
             <a v-bind="props" :href="companyData.website" target="_blank" rel="noopener noreferrer"
             >

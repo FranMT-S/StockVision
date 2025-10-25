@@ -61,25 +61,7 @@
           <!-- Spacer and additional actions -->
           <v-spacer />
           
-          <!-- Navigation Menu -->
-          <v-col cols="auto" class="d-none d-md-flex">
-            <v-btn
-              variant="text"
-              color="white"
-              class="mr-2"
-              @click="$router.push('/')"
-            >
-              Home
-            </v-btn>
-            <v-btn
-              variant="text"
-              color="white"
-              class="mr-2"
-              @click="$router.push('/tickers')"
-            >
-              Tickers
-            </v-btn>
-          </v-col>
+  
           
           <!-- Theme toggle and other actions can go here -->
           <v-col cols="auto">
@@ -101,6 +83,7 @@ import { ref, watch } from 'vue'
 import ToggleTheme from '@shared/components/ToggleTheme.vue'
 import { useRouter } from 'vue-router'
 import { useRoute } from 'vuetify/lib/composables/router.mjs'
+import { RouterNames } from '@/router/names'
 
 
 const router = useRouter()
@@ -120,7 +103,7 @@ const handleSearch =  () => {
   
   try {
     router.push({
-      name: 'Tickers',
+      name: RouterNames.Tickers,
       query: {
         q: searchQuery.value
       }

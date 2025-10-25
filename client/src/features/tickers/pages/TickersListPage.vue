@@ -74,6 +74,7 @@ import Paginator from '@/shared/components/Paginator.vue'
 import { useBreakpoints } from '@/shared/composables/useBreakpoints'
 import { storeToRefs } from 'pinia'
 import { useRoute } from 'vue-router'
+import { RouterNames } from '@/router/names'
 
 const router = useRouter()
 const route = useRoute();
@@ -130,7 +131,12 @@ const visiblePages = computed(() => {
 // Event handlers
 const handleStockClick = (stock: any) => {
   // Navigate to ticker detail page
-  router.push(`/ticker/${stock.ticker}`)
+  router.push({
+    name: RouterNames.TickerHistoric,
+    params: {
+      id: stock.ticker
+    }
+  })
 }
 
 const handlePageChange = (newPage: number) => {
