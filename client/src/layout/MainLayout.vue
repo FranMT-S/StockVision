@@ -119,7 +119,13 @@ const handleSearch =  () => {
   searchLoading.value = true
   
   try {
-    router.push(`/tickers?q=${searchQuery.value}`)
+    router.push({
+      name: 'Tickers',
+      query: {
+        q: searchQuery.value
+      }
+    })
+
   } catch (error) {
     console.error('Search error:', error)
   } finally {
