@@ -184,6 +184,7 @@ func buildPromptAdvice(symbol string, historicalData []models.HistoricalPrice, d
 // date format must be 2006-01-02
 func buildPredictPromp(symbol string, historicalData []models.HistoricalPrice, dayToAnalyze int, dayToPredict int) string {
 	action := fmt.Sprintf("generate predictions for the next %d trading days", dayToPredict)
+	tomorrow := time.Now().AddDate(0, 0, 1).Format("2006-01-02")
 	instructions := fmt.Sprintf(`
 	1. Analyze price trends, volume, and volatility.
 	2. Consider technical patterns (support, resistance, moving averages).
@@ -193,8 +194,8 @@ func buildPredictPromp(symbol string, historicalData []models.HistoricalPrice, d
 	6. Volume must vary realistically.
 	7. Calculate 'change' and 'changePercent' correctly based on the previous day.
 	
-	Respond with the predictions for %d trading days.
-	`, dayToPredict)
+	Respond with the predictions for %d trading days, the prediction must be start from the date %s.
+	`, dayToPredict, tomorrow)
 
 	data := buildHistoricalDataString(symbol, historicalData, dayToAnalyze)
 	additionalInstructions := "Provides predictions. Don't mention the labels."

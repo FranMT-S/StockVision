@@ -1,5 +1,5 @@
 <template>
-  <div class="metric-item tw-flex tw-flex-col pa-1 border border-gray-200 rounded ">
+  <div class="metric-item tw-flex tw-flex-col pa-1  rounded tw-bg-neutral-100">
     <div class="tw-flex tw-flex-row tw-items-center ga-1 justify-center">
       <div class="text-caption text-grey-darken-1 ">{{ title }}</div>
       <v-tooltip interactive>

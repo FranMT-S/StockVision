@@ -58,22 +58,22 @@ func NewFinancialService(cache cache.ICache, cacheExpiration FinancialCacheExpir
 }
 
 // GetHistoricalPrices returns the historical prices of a company from symbol ticker
-func (s *FinancialService) GetHistoricalPrices(ctx context.Context, ticker string, from string, to string) ([]models.HistoricalPrice, error) {
+func (s *FinancialService) GetHistoricalPrices(ctx context.Context, ticker string, from time.Time, to time.Time) ([]models.HistoricalPrice, error) {
 	params := map[string]string{
 		"symbol": strings.ToUpper(ticker),
 		"apikey": s.token,
 	}
 
-	if from != "" {
-		params["from"] = from
+	if !from.IsZero() {
+		params["from"] = from.Format("2006-01-02")
 	}
 
-	if to != "" && from != "" {
-		params["to"] = to
+	if !to.IsZero() && !from.IsZero() {
+		params["to"] = to.Format("2006-01-02")
 	}
 
-	key := fmt.Sprintf("FinancialService:historical_prices:%s:%s:%s", ticker, from, to)
-	expiration := s.CacheExpiration.HistoricalPrices
+	expiration := calculateHistoricDataExpirationInMinutes(365)
+	key := fmt.Sprintf("FinancialService:historical_prices:%s:%s:%s", ticker, from.Format("2006-01-02"), to.Format("2006-01-02"))
 
 	historicalPrices, err := cache.GetOrLoad(ctx, s.cache, key, expiration, func() ([]models.HistoricalPrice, error) {
 		var historicalPrices []models.HistoricalPrice
@@ -142,4 +142,24 @@ func (s *FinancialService) GetCompanyData(ctx context.Context, ticker string) (m
 	companyData.CEO = sanatizer.SanatizerString(companyData.CEO).SanatizedAll().String()
 
 	return companyData, nil
+}
+
+func calculateHistoricDataExpirationInMinutes(days int) time.Duration {
+	var minutes int
+
+	switch {
+	case days < 1:
+		minutes = 0
+	case days < 7:
+		minutes = 10
+	case days < 30:
+		minutes = 60
+	case days < 365:
+		minutes = 15
+	default:
+		minutes = 10
+	}
+
+	return time.Duration(minutes) * time.Minute
+
 }

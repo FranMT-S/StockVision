@@ -2,13 +2,6 @@ package geminiai
 
 import "google.golang.org/genai"
 
-var adviceSchema = &genai.Schema{
-	Type: genai.TypeObject,
-	Properties: map[string]*genai.Schema{
-		"advice": {Type: genai.TypeString},
-	},
-}
-
 var predictSchema = &genai.Schema{
 	Type: genai.TypeObject,
 	Properties: map[string]*genai.Schema{

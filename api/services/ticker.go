@@ -28,11 +28,11 @@ type TickerService interface {
 	InsertRecommendations(ctx context.Context, recommendations []models.Recommendation, batchSize int) (int64, error)
 
 	// Overview operations
-	GetHistoricalPrices(ctx context.Context, ticker string, from string, to string) ([]models.HistoricalPrice, error)
+	GetHistoricalPrices(ctx context.Context, ticker string, from time.Time, to time.Time) ([]models.HistoricalPrice, error)
 	GetLogo(ctx context.Context, ticker string) ([]byte, error)
 	GetLogoUrl(ctx context.Context, ticker string) (string, error)
 	GetCompanyData(ctx context.Context, ticker string) (models.CompanyData, error)
-	GetNews(ctx context.Context, ticker string, from string, to string) ([]models.CompanyNew, error)
+	GetNews(ctx context.Context, ticker string, from time.Time, to time.Time) ([]models.CompanyNew, error)
 }
 
 type tickerService struct {

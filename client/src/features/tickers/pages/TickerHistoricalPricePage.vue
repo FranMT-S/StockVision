@@ -22,7 +22,7 @@
       <!-- Main Content -->
       <div v-else-if="tickerData" class="ticker-content">
         <v-row class="mb-0 tw-relative">
-          <v-col cols="12" md="4" lg="3" class="tw-bg-[#ffffff] tw-shadow-sm tw-border-l-2 tw-rounded-lg dark:tw-bg-[#1e1e1e] dark:tw-text-white md:tw-sticky md:tw-top-[84px] md:tw-h-[calc(100vh_-_100px)]">
+          <v-col cols="12" md="4" lg="3" class="tw-bg-[#ffffff] tw-shadow-sm tw-border-l-2 tw-rounded-lg dark:tw-bg-[#1e1e1e] dark:tw-text-white lg:tw-sticky md:tw-top-[84px] md:tw-h-[calc(100vh_-_100px)]">
           
             <!-- Company Information -->
             <CompanyInfo 
@@ -32,15 +32,25 @@
             <CompanyMetrics 
               :company-data="tickerData.companyData"
               class="mb-6"
+            />  
+
+            <AdviceBanner 
+              :advice="tickerData.advice"
+              tittle="Friendly Advice"
             />
           </v-col>
           <v-col cols="12" md="4" lg="6">
             <!-- Stock Chart -->
-            <StockChart 
-            
+            <StockChart           
               :historical-data="tickerData.historicalPrices"
               :ticker="tickerId"
               class="mb-6"
+              @update:timeframe="interval = $event"
+              @update:predict="fetchPredictions()"
+              :predictNextWeek="companyPredictions"
+              :predictError="errorPredictions"
+              :isPredictLoading="isPredictLoading"
+
             />
 
             <!-- Recommendations Table -->
@@ -63,9 +73,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import type { CompanyOverview, Recommendation } from '@/shared/models/recomendations'
+import type { CompanyOverview,  Recommendation } from '@/shared/models/recomendations'
 
 // Components
 import StockChart from '../components/StockChart.vue'
@@ -73,46 +83,48 @@ import CompanyMetrics from '../components/CompanyMetrics.vue'
 import RecommendationsSection from '../components/RecommendationsTable.vue'
 import CompanyInfo from '../components/CompanyInfo.vue'
 import CompanyNews from '../components/CompanyNews.vue'
+import AdviceBanner from '../components/AdviceBanner.vue'
 import { useTickersStore } from '../store/tickersStore'
 import { storeToRefs } from 'pinia'
+import { Timeframe } from '@/shared/enums/timeFrame'
 
 
 const route = useRoute()
-const {fetchCompanyOverView} = useTickersStore()
-const {companyOverview, error} = storeToRefs(useTickersStore())
+const {fetchCompanyOverView, fetchCompanyHistoricalPrices, fetchCompanyPredictions} = useTickersStore()
+const {companyOverview, error, companyHistoricalPrices,companyPredictions,errorPredictions} = storeToRefs(useTickersStore())
 
 // State
 const loading = ref(true)
 const tickerData = ref<CompanyOverview | null>(null)
+const interval = ref(Timeframe['1M'])
+const isPredictLoading = ref(false)
 
 // Computed
 const tickerId = computed(() => route.params.id as string)
-
 const recommendations = computed<Recommendation[]>(() => {
   if(!companyOverview.value){
     return []
   }
-
   return companyOverview.value.recommendations
 })
-    
-  
-  
+
 
 // fetch company overview fill the data in the store
 // exception safe
 const fetchTickerData = async () => {
-  loading.value = true
   error.value = null
-
-  await fetchCompanyOverView(tickerId.value)
+  const from = new Date()
+  from.setDate(from.getDate() - interval.value)
+  await fetchCompanyOverView(tickerId.value,from)
   
   if(error.value){
+    loading.value = false
     return;
   }
 
-  if (!companyOverview.value) {
+  if (!companyOverview.value ) {
     error.value = `Ticker ${tickerId.value} not found`
+    loading.value = false
     return
   }
 
@@ -123,15 +135,49 @@ const fetchTickerData = async () => {
     historicalPrices: companyOverview.value?.historicalPrices,
     advice: companyOverview.value?.advice
   }
-
-  console.log(tickerData.value)
-
-  loading.value = false
 }
 
+const fetchPredictions = async () => {
+  isPredictLoading.value = true
+  await fetchCompanyPredictions(tickerId.value)
+  isPredictLoading.value = false
+}
+
+watch(interval, async () => {
+    let now = undefined;
+    if(interval.value !== Timeframe['All']){
+      now = new Date();
+      now.setDate(now.getDate() - interval.value)
+    }
+    
+    await fetchCompanyHistoricalPrices(tickerId.value, now)
+})
+
+watch(companyHistoricalPrices, () => {
+  if(!tickerData.value){
+    return;
+  }
+
+  tickerData.value = {
+    ...tickerData.value,
+    historicalPrices: companyHistoricalPrices.value
+  }
+})
+
 // Lifecycle
-onMounted(() => {
-  fetchTickerData()
+onMounted(async () => {
+  loading.value = true
+  const now = new Date();
+  now.setDate(now.getDate() - interval.value) 
+  await fetchTickerData()
+  companyPredictions.value = []
+
+  if(error.value){
+    loading.value = false
+    return;
+  }
+  
+  loading.value = false
 })
 
 </script>

@@ -19,6 +19,7 @@ func SetupRoutes(router *chi.Mux, config *models.ServerConfig) {
 	router.Route("/api/v1", func(r chi.Router) {
 		// Tickers routes
 		r.Get("/tickers", tickersController.ListTickers)
+		r.Get("/tickers/{id}/historical", tickersController.GetTickerHistoricalPrices)
 		r.Get("/tickers/{id}/logo", tickersController.GetTickerLogo)
 		r.Get("/tickers/{id}/overview", tickersController.GetTickerOverview)
 		r.Get("/tickers/{id}/predictions", tickersController.GetTickerPredictions)

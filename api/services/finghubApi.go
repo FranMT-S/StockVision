@@ -44,28 +44,34 @@ func NewFinghubService(cache cache.ICache, cacheExpiration FinghubCacheExpiratio
 	}
 }
 
-func (s *FinghubService) GetNews(ctx context.Context, ticker string, from string, to string) ([]models.CompanyNew, error) {
+func (s *FinghubService) GetNews(ctx context.Context, ticker string, from time.Time, to time.Time) ([]models.CompanyNew, error) {
 	queryParams := map[string]string{
 		"symbol": strings.ToUpper(ticker),
 		"token":  s.token,
 	}
 
+	var fromString string
+	var toString string
+
+	fromString = from.Format("2006-01-02")
+	toString = to.Format("2006-01-02")
+
 	// create DateRangeFilter
-	if from == "" {
+	if from.IsZero() {
 		now := time.Now()
 		aYearAgo := now.AddDate(-1, 0, 0)
-		date := aYearAgo.Format("2006-01-02")
-		queryParams["from"] = date
+		fromString = aYearAgo.Format("2006-01-02")
 	}
 
-	if to == "" {
-		date := time.Now().Format("2006-01-02")
-		queryParams["to"] = date
+	if to.IsZero() {
+		toString = time.Now().Format("2006-01-02")
 	}
 
-	cacheKey := fmt.Sprintf("FinghubService:news:%s:%s:%s", ticker, from, to)
+	queryParams["from"] = fromString
+	queryParams["to"] = toString
+
+	cacheKey := fmt.Sprintf("FinghubService:news:%s:%s:%s", ticker, fromString, toString)
 	expiration := s.CacheExpiration.News
-
 	news, err := cache.GetOrLoad(ctx, s.cache, cacheKey, expiration, func() ([]models.CompanyNew, error) {
 		var news []models.CompanyNew
 		if err := s.client.Get("/company-news", queryParams, &news); err != nil {

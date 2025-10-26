@@ -5,16 +5,17 @@ import { useTheme } from "vuetify";
 export const useGlobalStore = defineStore('global', () => {
   const Theme = useTheme();
   Theme.change(localStorage.getItem('theme') || 'light');
-  
+  const isDark = ref(localStorage.getItem('theme') === 'dark');
+
   const updateTheme = () =>{
     try {
-      if (Theme.global.name.value === 'dark') {
+      if (isDark.value) {
         document.body.classList.add('tw-dark')
       } else {
         document.body.classList.remove('tw-dark')
       }
 
-      localStorage.setItem('theme', Theme.global.name.value);
+      localStorage.setItem('theme', isDark.value ? 'dark' : 'light');
     } catch (error) {
       console.error('error saving theme:', error);
     }
@@ -22,16 +23,16 @@ export const useGlobalStore = defineStore('global', () => {
 
   updateTheme();
 
-  watch(() => Theme.global.name.value, () => {
+  watch(() => isDark.value, () => {
     updateTheme();
   });
 
   const toggleTheme = () => {
-    Theme.change(Theme.global.name.value === 'light' ? 'dark' : 'light');
+    isDark.value = !isDark.value;
+    Theme.global.name.value = isDark.value ? 'dark' : 'light'
     updateTheme();
   };
 
-  const isDark = computed(() => Theme.global.name.value === 'dark');
 
   return {
     toggleTheme,

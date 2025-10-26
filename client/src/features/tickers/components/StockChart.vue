@@ -1,191 +1,300 @@
 <template>
   <div class="chart-wrapper">
+    <div v-if="isGeneratingScreenshot"  data-html2canvas-ignore="true" class="tw-z-50 tw-fixed tw-inset-0 tw-bg-black/30 tw-text-white tw-flex tw-items-center tw-justify-center">
+      <p class="tw-text-[18px] tw-font-medium tw-text-blue">Generating Screenshot...</p>
+    </div>
     <!-- Controles superiores -->
     <div class="chart-controls">
       <div class="controls-left">
 
-        <button @click="toggleChartType('candlestick')" class="btn py-2 px-4">
+        <v-btn :color="chartType === ChartType['candlestick'] ? 'primary' : 'secondary'" variant="tonal" @click="toggleChartType(ChartType['candlestick'])" class=" py-2 px-4">
           <v-icon icon="mdi-chart-waterfall" size="18" /> 
-        </button>
+        </v-btn>
         
-        <button @click="toggleChartType('line')" class="btn py-2 px-4">
+        <v-btn :color="chartType === ChartType['area'] ? 'primary' : 'secondary'" variant="tonal" @click="toggleChartType(ChartType['area'])" class=" py-2 px-4">
           <v-icon icon="mdi-chart-line" size="18" /> 
-        </button>
+        </v-btn>
+
+
+        <v-btn 
+          v-if="chartType === ChartType['candlestick']"
+          :color="isShowPredict ? 'primary' : 'secondary'" variant="tonal" @click="toggleShowPredict()" class=" py-2 px-4">
+          <v-icon icon="mdi-eye" size="18" /> 
+          <span v-if="!isShowPredict">{{isPredictLoading ? 'Loading...' : 'Get Vision'}}</span>
+          <span v-else>Hide Vision</span>
+        </v-btn>
       </div>
       
       <div class="controls-right">
         <div class="tw-flex tw-flex-row tw-items-center tw-gap-1 timeframe">
           <button 
-          :class="{ 'tw-text-primary tw-bg-[#f5f5f5] tw-rounded': timeframe === option }"
-          v-for="option in timeframeOptions" :key="option" @click="timeframe = option" class="tw-text-[#717171] tw-p-2 tw-py-1 tw-text-[12px] tw-font-medium tw-pa-0 tw-capitalize">{{ option }}</button>
-        </div>
+          :class="{ 'tw-text-primary tw-bg-[#f5f5f5] tw-rounded': timeframe === option.value }"
+          v-for="option in timeframeOptions" :key="option.value" @click="timeframe = option.value" class="tw-text-[#717171] tw-p-2 tw-py-1 tw-text-[12px] tw-font-medium tw-pa-0 tw-capitalize">{{ option.label }}</button>
+        </div>  
         <button @click="takeScreenshot" class="btn py-2 px-4">
           <v-icon icon="mdi-camera" size="18" /> 
         </button>
       </div>
     </div>
 
-    <!-- Indicadores de precio -->
-    <!-- <div class="price-info" v-if="currentPrice">
-      <div class="price-item">
-        <span class="label">Open:</span>
-        <span class="value">{{ currentPrice.open.toFixed(2) }}</span>
-      </div>
-      <div class="price-item">
-        <span class="label">High:</span>
-        <span class="value high">{{ currentPrice.high.toFixed(2) }}</span>
-      </div>
-      <div class="price-item">
-        <span class="label">Low:</span>
-        <span class="value low">{{ currentPrice.low.toFixed(2) }}</span>
-      </div>
-      <div class="price-item">
-        <span class="label">Close:</span>
-        <span :class="['value', currentPrice.close >= currentPrice.open ? 'up' : 'down']">
-          {{ currentPrice.close.toFixed(2) }}
-        </span>
-      </div>
-      <div class="price-item" v-if="priceChange">
-        <span class="label">Change:</span>
-        <span :class="['value', priceChange >= 0 ? 'up' : 'down']">
-          {{ priceChange >= 0 ? '+' : '' }}{{ priceChange.toFixed(2) }}%
-        </span>
-      </div>
-    </div> -->
+    <!-- Chard container -->
+    <div ref="chartContainer" class="chart-container"/>
 
-    <!-- Contenedor del gráfico -->
-    <div ref="chartContainer" class="chart-container"></div>
-
-    <!-- Crosshair info -->
-    <div class="crosshair-info" v-if="crosshairData">
-      <div class="info-row">
-        <span>Tiempo: {{ crosshairData.time }}</span>
-      </div>
-      <div class="info-row">
-        <span>Precio: {{ crosshairData.price?.toFixed(2) }}</span>
-      </div>
-    </div>
+ 
+    <!-- crosshair tooltip -->
+    <FloatingTooltip :visible="selectedCrosshairData !== null">
+      <div class="tw-bg-black/70 tw-rounded tw-p-2 tw-text-white">
+        <CrossHairDetails :data="selectedCrosshairData!" />
+      </div>  
+    </FloatingTooltip>
   </div>
 </template>
 
+
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch, computed, ComputedRef } from 'vue';
+import { Timeframe } from '@/shared/enums/timeFrame';
+import { ref, onMounted, onUnmounted, watch, computed, ComputedRef, reactive, shallowReactive } from 'vue';
 import { 
   createChart, 
   IChartApi, 
   ISeriesApi, 
   CandlestickData,
   CandlestickSeries,
-  LineSeries,
   HistogramSeries,
-  LineData,
   HistogramData,
   MouseEventParams,
-  Time
+  Time,
+  AreaSeries,
+  AreaData,
+  CandlestickSeriesPartialOptions,
+  HistogramSeriesPartialOptions,
+  AreaSeriesPartialOptions
 } from 'lightweight-charts';
-import { HistoricalPrice,CompanyNew} from '@/shared/models/recomendations';
+import { HistoricalPrice} from '@/shared/models/recomendations';
+import html2canvas from 'html2canvas';
+import FloatingTooltip from '@/shared/components/FloatingTooltip.vue';
+import CrossHairDetails from './CrossHairDetails.vue';
 
 interface Props {
+  ticker: string;
   historicalData?: HistoricalPrice[];
-  newData?: CompanyNew[];
-  data?: CandlestickData[];
   width?: number;
   height?: number;
+  initialInterval?: Timeframe;
+  predictNextWeek?: HistoricalPrice[];
+  predictError?: string | null;
+  isPredictLoading?: boolean;
 }
 
-enum Timeframe {
-  '1D' = '1D',
-  '1W' = '1W',
-  '1M' = '1M',
-  '6M' = '6M',
-  '1Y' = '1Y',
-  'All' = 'All'
+type TSeriesType = 'Candlestick' | 'Line' | 'Area' | 'Histogram' | 'Predict' | 'PredictHistogram';
+type CandleChardColor = {
+  upColor: string,
+  downColor: string,
+  upVolumeColor: string,
+  downVolumeColor: string
 }
 
-const timeframeOptions = [ Timeframe['1D'], Timeframe['1W'], Timeframe['1M'],  Timeframe['6M'], Timeframe['1Y'], Timeframe['All'] ];
+type CharData = {
+  mainChartData: CandlestickData[], 
+  volumeChartData: HistogramData[],
+  areaChartData: AreaData[]
+}
+
+interface StockHLOC {
+    time: string;
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+    volume: number;
+    change: number;
+    changePercent: number;
+    vwap: number;
+    date: Date;
+}
+
+enum Scales {
+  'volume' = 'volume',
+  'right' = 'right'
+}
+
+enum ChartType {
+  'candlestick' = 'candlestick',
+  'line' = 'line',
+  'area' = 'area'
+}
 
 const props = withDefaults(defineProps<Props>(), {
   historicalData: () => [],
-  newData: () => [],
-  data: () => [],
+  companyNews: () => [],
   width: 800,
-  height: 500
+  height: 500,
+  initialInterval: Timeframe['1M'],
+  predictNextWeek: () => [],
+  predictError: () => "",
+  isPredictLoading: () => false
 });
 
+const emit = defineEmits(['update:timeframe','update:predict'])
+
 const chartContainer = ref<HTMLElement | null>(null);
-const chartType = ref<'candlestick' | 'line'>('candlestick');
-const timeframe = ref(Timeframe['All']);
+const chartType = ref<ChartType>(ChartType['candlestick']);
+const timeframe = ref(props.initialInterval);
 const currentPrice = ref<CandlestickData | null>(null);
-const crosshairData = ref<{ time: string; price: number | null } | null>(null);
 const visibleRange = ref<{ from: Time; to: Time } | null>(null);
+const isShowPredict = ref<boolean>(false);
+const isGeneratingScreenshot = ref<boolean>(false);
+const selectedCrosshairData = ref<HistoricalPrice | null>(null);
+
+const timeframeOptions =ref([
+    { value: Timeframe['1M'], label: '1M' },
+    { value: Timeframe['3M'], label: '3M' },
+    { value: Timeframe['6M'], label: '6M' },
+    { value: Timeframe['1Y'], label: '1Y' },
+    { value: Timeframe['All'], label: 'All' }
+  ]);
+
+
+// styles of the elements in charts
+const CandleSeriesTheme: CandlestickSeriesPartialOptions = {
+  priceScaleId: Scales.right,
+  upColor: '#089981',
+  downColor: '#f23645',
+  wickUpColor: '#089981',
+  wickDownColor: '#f23645',
+  borderVisible: false,
+}
+
+const CandlePredictSeriesTheme: CandlestickSeriesPartialOptions = {
+  priceScaleId: Scales.right,
+  upColor: '#1976d2',      
+  downColor: '#ff9800',     
+  borderColor: '#1976d2',
+  wickUpColor: '#1976d2',
+  wickDownColor: '#ff9800',
+  borderVisible: false,   
+}
+
+const VolumeSeriesTheme: HistogramSeriesPartialOptions = {
+  priceScaleId: Scales.volume, 
+  color: '#2962FF',   
+};
+
+const PredictVolumeSeriesTheme: HistogramSeriesPartialOptions = {
+  priceScaleId: Scales.volume, 
+  color: '#ff9800',
+}
+
+const LinearAreaSeriesTheme: AreaSeriesPartialOptions = {
+  priceScaleId: Scales.right,
+  lineColor: '#2962FF', 
+  topColor: '#2962FF', 
+  bottomColor: 'rgba(41, 98, 255, 0.28)' 
+}
 
 let chart: IChartApi | null = null;
-let mainSeries: ISeriesApi<'Candlestick'> | ISeriesApi<'Line'> | null = null;
-let volumeSeries: ISeriesApi<'Histogram'> | null = null;
 
+const series = shallowReactive<Record<TSeriesType, ISeriesApi<any> | null>>({
+  Candlestick: null,
+  Line: null,
+  Area: null,
+  Histogram: null,
+  Predict: null,
+  PredictHistogram: null
+});
 
+const predictChartData: ComputedRef<{
+  mainChartData: CandlestickData[], 
+  volumeChartData: HistogramData[]
+}> = computed(() => {
+  console.log("change data")
+  if (!props.predictNextWeek) return {mainChartData: [], volumeChartData: []};
+  const filteredData = props.predictNextWeek.filter((stock) => {
+    const stockDate = new Date(stock.date);
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    stockDate.setHours(0, 0, 0, 0);
+    tomorrow.setHours(0, 0, 0, 0);
 
-const historicalDataProcessed: ComputedRef<CandlestickData[]> = computed(() => {
-  if (!props.historicalData) return [];
+    return stockDate >= tomorrow;
+  });
 
-  return props.historicalData.map(item => {
-    return {
-      time: item.date,
-      open: item.open,
-      high: item.high,
-      low: item.low,
-      close: item.close,
-      date: new Date(item.date)
-    }
-  }).sort((a, b) => a.date.getTime() - b.date.getTime())
+  const orderedData = creteaStockHLOC(filteredData);
+  return createCandleCharData(orderedData,{
+    upColor: '#1976d2',      
+    downColor: '#ff9800',
+    upVolumeColor: '#1976d280',
+    downVolumeColor: '#ff980080'
+  });
 }); 
 
-const chartData: ComputedRef<{seriesData: CandlestickData[], volumeData: HistogramData[]}> = computed(() => {
-  if (!props.historicalData) return {seriesData: [], volumeData: []};
-  const orderedData = props.historicalData.map((item) => {
+const chartData: ComputedRef<{
+  mainChartData: CandlestickData[], 
+  volumeChartData: HistogramData[]
+  areaChartData: AreaData[]
+}> = computed(() => {
+  if (!props.historicalData) 
+    return {mainChartData: [], volumeChartData: [], areaChartData: []};
+  
+  const orderedData = creteaStockHLOC(props.historicalData);
+  return createCandleCharData(orderedData);
+}); 
+
+const creteaStockHLOC = (data: HistoricalPrice[]) : StockHLOC[] => {
+  if (!data) return [];
+  return data.map(item => {
     return {
       ...item,
       time: item.date,
       date: new Date(item.date)
     }
-  }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  
-  const seriesData: CandlestickData[] = [];
-  const volumeData: HistogramData[] = [];
-  
- 
+  }).sort((a, b) => a.date.getTime() - b.date.getTime()) 
+}
 
-  for (let index = 0; index < orderedData.length; index++) {
-    const element = orderedData[index];
-    seriesData.push({
-      time: element.time,
-      open: element.open,
-      high: element.high,
-      low: element.low,
-      close: element.close,
-      color: element.close > element.open ? '#26a69a' : '#ef5350'
+const createCandleCharData = (data: StockHLOC[],color?:CandleChardColor) : CharData => {
+  if (!data) return {mainChartData: [], volumeChartData: [], areaChartData: []};
+  const mainChartData: CandlestickData[] = [];
+  const volumeChartData: HistogramData[] = [];
+  const areaChartData: AreaData[] = [];
+  
+  if (!color) {
+    color = {
+      upColor: '#26a69a',
+      downColor: '#ef5350',
+      upVolumeColor: '#26a69a80',
+      downVolumeColor: '#ef535080'
+    }
+  }
+
+  // default colors if not send
+  const {upColor = '#26a69a', downColor = '#ef5350', upVolumeColor = '#26a69a80', downVolumeColor = '#ef535080'} = color;
+
+  for (let index = 0; index < data.length; index++) {
+    const element = data[index];
+    mainChartData.push({
+      ...element,
+      color: element.close > element.open ? upColor : downColor,
     })
 
-    volumeData.push({
+    volumeChartData.push({
       time: element.time,
       value: element.volume,
-      color: element.close > element.open ? '#26a69a80' : '#ef535080'
+      color: element.close > element.open ? upVolumeColor : downVolumeColor
+    })
+
+    areaChartData.push({
+      time: element.time,
+      value: element.high,
+      lineColor: '#2962FF', 
+      topColor: '#2962FF', 
+      bottomColor: 'rgba(41, 98, 255, 0.28)' 
     })
   }
 
+  return { mainChartData, volumeChartData,areaChartData }
+}
 
-  return { seriesData, volumeData }
-}); 
-
-
-
-const priceChange = computed(() => {
-  if (!currentPrice.value) return null;
-  const change = ((currentPrice.value.close - currentPrice.value.open) / currentPrice.value.open) * 100;
-  return change;
-});
-
-
+// build the container to visualize the chart
 const initChart = () => {
   if (!chartContainer.value) return;
 
@@ -212,181 +321,203 @@ const initChart = () => {
       
     },
     rightPriceScale: {
+      visible: true,
       borderColor: '#cccccc',
     },
+    localization: {
+      priceFormatter: (price: number) => `${price.toFixed(2)}$`,
+    }
+
   });
 
   createMainSeries();
 
-  const dataToUse = historicalDataProcessed.value;
-  mainSeries?.setData(dataToUse);
+  const dataToUse = chartData.value.mainChartData;
   
   if (dataToUse.length > 0) {
     currentPrice.value = dataToUse[dataToUse.length - 1];
   }
 
+  // crosshair to show modal when hover over the chart
   chart.subscribeCrosshairMove((param: MouseEventParams) => {
-    if (param.time && param.seriesData.get(mainSeries!)) {
-      const data = param.seriesData.get(mainSeries!) as any;
-      crosshairData.value = {
-        time: param.time as string,
-        price: data?.close || data?.value || null
-      };
-    } else {
-      crosshairData.value = null;
+
+    const index = param.logical;
+    if(index === undefined || index < 0){
+      selectedCrosshairData.value = null;
+      return;
+    } 
+    
+    if(index <= props.historicalData.length){
+      selectedCrosshairData.value = props.historicalData[index];
     }
+
+    if(index > props.historicalData.length){
+      selectedCrosshairData.value = props.predictNextWeek[index - props.historicalData.length + 1];
+    }
+    
   });
 
-  chart.timeScale().fitContent();
 };
 
 
+
+// create the way to show the chart
 const createMainSeries = () => {
   if (!chart) return;
 
-  if (chartType.value === 'candlestick') {
-    mainSeries = chart.addSeries(CandlestickSeries, {
-      upColor: '#26a69a',
-      downColor: '#ef5350',
-      borderVisible: false,
-      wickUpColor: '#26a69a',
-      wickDownColor: '#ef5350',
-    });
-
-    addVolume()
-    
-    
+  if (chartType.value === ChartType['candlestick']) {
+    buildCandleChart()
   } else {
-    mainSeries = chart.addSeries(LineSeries, {
-      color: '#2962FF',
-      lineWidth: 2,
-    });
-    
+    buildLineAreaChart()
   }
+  
+  updateScales()
 };
 
-const toggleChartType = (_chartType: 'candlestick' | 'line') => {
-  if (!chart || !mainSeries) return;
+const buildCandleChart = () => {
+  updateChartSerie('Area', 'remove')
+  updateChartSerie('Candlestick', 'add')
+  updateChartSerie('Histogram', 'add')
+   
+  const predictAction = isShowPredict.value ? 'add' : 'remove'
+  updateChartSerie('Predict', predictAction)
+  updateChartSerie('PredictHistogram', predictAction)
+}
 
-  if(chartType.value === _chartType) return;
-
-  const currentData = chartData.value.seriesData;
+const buildLineAreaChart = () => {
+  updateChartSerie('Area', 'add')
   
-  chart.removeSeries(mainSeries);
+  updateChartSerie('Histogram', 'remove')
+  updateChartSerie('Candlestick', 'remove')
+  updateChartSerie('Predict', 'remove')
+  updateChartSerie('PredictHistogram', 'remove')
+
+}
+
+// update the chart series, add or remove
+// add just work if the series is not already added
+// remove just work if the series is already added
+const updateChartSerie = (type: TSeriesType, action: 'add' | 'remove') =>{
+  if(!chart) return;
+
+  if(action === 'remove'){ 
+    if(series[type] === null) 
+      return;
+    
+    chart.removeSeries(series[type])
+    series[type] = null;
+    return;  
+  }
+
+  if(action === 'add' && series[type] !== null){
+    return;
+  }
+
+  switch (type) {
+    case 'Candlestick':
+      series['Candlestick'] = chart.addSeries(CandlestickSeries, CandleSeriesTheme);
+      series['Candlestick'].setData(chartData.value.mainChartData);
+      break;
+    case 'Predict':
+      series['Predict'] = chart.addSeries(CandlestickSeries, CandlePredictSeriesTheme);
+      series['Predict'].setData(predictChartData.value.mainChartData);
+      break;
+    case 'Area':
+      series['Area'] = chart.addSeries(AreaSeries, LinearAreaSeriesTheme);
+      series['Area'].setData(chartData.value.areaChartData);
+      break;
+    case 'Histogram':
+      series['Histogram'] = chart.addSeries(HistogramSeries,VolumeSeriesTheme);
+      series['Histogram'].setData(chartData.value.volumeChartData);
+      break;
+    case 'PredictHistogram':
+      series['PredictHistogram'] = chart.addSeries(HistogramSeries,PredictVolumeSeriesTheme);
+      series['PredictHistogram'].setData(predictChartData.value.volumeChartData);
+      break;
+    default:
+      break;
+  }
+}
+
+const toggleShowPredict = async () =>{
+  if(!chart || props.isPredictLoading) return;
+  
+  if(!props.predictNextWeek || props.predictNextWeek?.length === 0){
+    emit('update:predict', !isShowPredict.value)
+    return;
+  }
+
+  isShowPredict.value = !isShowPredict.value;
+  if(chartType.value === ChartType['candlestick'])
+    buildCandleChart()
+}
+// togle the view of the chart
+const toggleChartType = (_chartType: ChartType) => {
+  if (!chart) 
+    return;
+
+  if(chartType.value === _chartType)
+    return;
+
   chartType.value = _chartType;
   createMainSeries();
-
-  if (chartType.value === 'line') {
-    ;
-    const lineData: LineData[] = currentData.map((d) => ({
-      time: d.time,
-      value: d.close
-    }));
-    (mainSeries as ISeriesApi<'Line'>).setData(lineData);
-    removeVolume()
-  } else {
-    mainSeries?.setData(currentData);
-  }
-  setTimeScaleView()
-  chart.timeScale().fitContent();
+  zoomBasedInIntervalTime()
+  GoToLastStock();
 };
 
-const addVolume = () => {
+const updateScales = () => {
   if (!chart) return;
-
-  volumeSeries = chart.addSeries(HistogramSeries, {
-    priceScaleId: '', // Usa una escala independiente
-    priceFormat: { type: 'volume' },
-    color: '#26a69a'
-  });
-
-  volumeSeries.priceScale().applyOptions({
+  const existVolumeScale = series['Histogram'] !== null; 
+  
+  const volumeScale = {
+    visible: false,
     scaleMargins: {
       top: 0.8,
       bottom: 0,
     },
-  });
-
-  chart.priceScale('').applyOptions({
-    scaleMargins: {
-      top: 0.9,   // 80% del espacio superior para las velas
-      bottom: 0,  // 20% inferior para el volumen
-    },
-  });
- 
-  volumeSeries.setData(chartData.value.volumeData);
-};
-
-const removeVolume = () => {
-  if (!chart || !volumeSeries) return;
-  chart.removeSeries(volumeSeries);
-  volumeSeries = null;
-
-  chart.priceScale('').applyOptions({
-    scaleMargins: {
-      top: 1,  
-      bottom: 0, 
-    },
-  });
-};
-
-const takeScreenshot = () => {
-  if (!chart) return;
-  const canvas = chartContainer.value?.querySelector('canvas');
-  if (canvas) {
-    canvas.toBlob((blob) => {
-      if (blob) {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `chart-${Date.now()}.png`;
-        a.click();
-        URL.revokeObjectURL(url);
-      }
-    });
   }
-};
 
-watch(timeframe, () => {
-  setTimeScaleView()
-});
+  const mainSerieScale = {
+    visible: true,
+    scaleMargins: {
+      top: 0,  
+      bottom: 0.2, 
+    },
+  }
 
-const setTimeScaleView = () => {
- if (!chart || historicalDataProcessed.value.length === 0) return;
-  const data = historicalDataProcessed.value;
+  if (!existVolumeScale) {
+    mainSerieScale.scaleMargins = {
+      top: 0,
+      bottom: 0,
+    }
+  }
+
+  if(existVolumeScale){
+    chart.priceScale(Scales.volume).applyOptions(volumeScale); 
+  }
+  
+  chart.priceScale(Scales.right).applyOptions(mainSerieScale);
+  handleResize()
+}
+
+// set the scale of the charts and do zoom  
+const zoomBasedInIntervalTime = () => {
+ if (!chart || chartData.value.mainChartData.length === 0) return;
+  const data = chartData.value.mainChartData;
   const lastIndex = data.length - 1;
   
-
   let fromIndex = 0;
 
   switch (timeframe.value) {
-    case Timeframe['1D']:
-      fromIndex = Math.max(0, lastIndex - 1);
-      break;
-    case Timeframe['1W']:
-      fromIndex = Math.max(0, lastIndex - 7);
-      break;
-    case Timeframe['1M']:
-      fromIndex = Math.max(0, lastIndex - 30);
-      break;
-    case Timeframe['6M']:
-      fromIndex = Math.max(0, lastIndex - 180);
-      break;
-    case Timeframe['1Y']:
-      fromIndex = Math.max(0, lastIndex - 365);
-      break;
     case Timeframe['All']:
       fromIndex = 0;
       break;
+    default:
+      fromIndex = Math.max(0, lastIndex - timeframe.value);
+      break;
   }
 
-
-
-
   visibleRange.value = { from: data[fromIndex].time, to: data[lastIndex].time };
-
-
-
   GoToLastStock(); 
 }
 
@@ -399,41 +530,95 @@ const handleResize = () => {
   }
 };
 
-watch(visibleRange, () => {
-  if (chart) {
-    if (visibleRange.value) {
-      chart.timeScale().setVisibleRange(visibleRange.value);
-    } else {
-      chart.timeScale().scrollToRealTime();
-    }
-  }
-});
-
-watch(() => props.data, (newData) => {
-  if (mainSeries && newData.length > 0) {
-    if (chartType.value === 'line') {
-      const lineData: LineData[] = newData.map(d => ({
-        time: d.time,
-        value: d.close
-      }));
-      (mainSeries as ISeriesApi<'Line'>).setData(lineData);
-    } else {
-      mainSeries.setData(newData);
-    }
-    currentPrice.value = newData[newData.length - 1];
-    chart?.timeScale().fitContent();
-    GoToLastStock();
-  }
-});
-
 const GoToLastStock = () => {
   if (!chart) return;
     chart.timeScale().scrollToRealTime();
 }
 
+const takeScreenshot = async () => {
+  try {
+    if ( !chartContainer.value) return;
+  
+    isGeneratingScreenshot.value = true;
+    const lightWeightLogo = document.querySelector('#tv-attr-logo')
+    if(!lightWeightLogo?.getAttribute('data-html2canvas-ignore'))
+      lightWeightLogo?.setAttribute('data-html2canvas-ignore', 'true')
+
+    // await to allow show the background
+    await new Promise((r) => setTimeout(r, 10));
+
+    const canvas = await html2canvas(chartContainer.value, {
+      backgroundColor: "#ffffff",
+      useCORS: true,
+      scale: 2
+    });
+
+    const link = document.createElement("a");
+    link.href = canvas.toDataURL("image/png");
+    link.download = `chart-${Date.now()}.png`;
+    link.click();
+  } finally {
+    isGeneratingScreenshot.value = false;
+  }
+};
+
+watch(timeframe, async () => {
+  emit('update:timeframe', timeframe.value)
+  zoomBasedInIntervalTime()
+});
+
+watch(() => props.predictNextWeek, async () => {
+
+  if(props.predictNextWeek?.length > 0){
+    isShowPredict.value = true;
+  }
+  else{
+    isShowPredict.value = false;
+  }
+  createMainSeries()
+});
+
+
+watch(visibleRange, () => {
+  if (chart) {
+    if (visibleRange.value) {
+      // show a segment of line of the chart
+      chart.timeScale().setVisibleRange(visibleRange.value);
+    } else {
+      // show all the chart
+      chart.timeScale().scrollToRealTime();
+    }
+  }
+});
+
+
+// recreate the chart when the data changes
+watch(() => props.historicalData, (newData) => {
+  if (!chart) return;
+
+  if(chartType.value === ChartType['candlestick']){
+    series['Candlestick']?.setData(chartData.value.mainChartData)
+    series['Histogram']?.setData(chartData.value.volumeChartData)
+    series['Predict']?.setData(predictChartData.value.mainChartData)
+    series['PredictHistogram']?.setData(predictChartData.value.volumeChartData)
+  }
+
+  if(chartType.value === ChartType['area']){
+    series['Area']?.setData(chartData.value.areaChartData)
+  }
+  
+  updateScales()
+  zoomBasedInIntervalTime()
+  chart.timeScale().fitContent();
+  GoToLastStock();
+});
+
+
 // Lifecycle
 onMounted(() => {
   initChart();
+  GoToLastStock(); 
+  zoomBasedInIntervalTime()
   window.addEventListener('resize', handleResize);
 });
 
@@ -553,18 +738,6 @@ onUnmounted(() => {
   min-height: 400px;
   border-radius: 4px;
   overflow: hidden;
-}
-
-.crosshair-info {
-  position: absolute;
-  top: 80px;
-  left: 32px;
-  background: rgba(255, 255, 255, 0.95);
-  padding: 8px 12px;
-  border-radius: 4px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  font-size: 12px;
-  pointer-events: none;
 }
 
 .info-row {

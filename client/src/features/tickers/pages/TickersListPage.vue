@@ -91,7 +91,6 @@ onMounted(() => {
 watch(
   () => route.query,
   (newQuery) => {
-    console.log("newQuery",newQuery)
     tickersStore.currentPage = Number(newQuery.page) || 1;
     tickersStore.search = String(newQuery.q) || '';
   },

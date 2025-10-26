@@ -24,9 +24,11 @@ export const useTickersStore = defineStore('tickers', () => {
   const loading = ref(true)
   const error = ref<string | null>(null)
   const errorPredictions = ref<string | null>(null)
+  const errorHistoricalPrices = ref<string | null>(null)
   const tickers = ref<TickerListResponse[]>([])
   const companyOverview = ref<CompanyOverview | null>(null)
-  const companyPredictions = ref<HistoricalPrice[] | null>(null)
+  const companyPredictions = ref<HistoricalPrice[]>([])
+  const companyHistoricalPrices = ref<HistoricalPrice[]>([])
 
   // Pagination state
   const currentPage = ref(1)
@@ -90,7 +92,7 @@ export const useTickersStore = defineStore('tickers', () => {
     }
   }
 
-  const fetchCompanyOverView = async (ticker: string) => {
+  const fetchCompanyOverView = async (ticker: string,from:Date) => {
     let showLoader = true; 
     const {debounced, cancel} = useDebounce()
     
@@ -102,7 +104,7 @@ export const useTickersStore = defineStore('tickers', () => {
     
     abortIfControllerIsActive(companyOverviewCancellationToken.value)
     companyOverviewCancellationToken.value = new AbortController()  
-    const url = API_CONFIG.BASE_URL + API_CONFIG.ENDPOINTS.Overview(ticker)
+    const url = API_CONFIG.BASE_URL + API_CONFIG.ENDPOINTS.Overview(ticker,from)
     
     error.value = null
     const response = await customFetch<CompanyOverview>(url,{signal: companyOverviewCancellationToken.value.signal})
@@ -119,6 +121,25 @@ export const useTickersStore = defineStore('tickers', () => {
     }
   }
 
+  /**
+   * fetch company historical prices and update the state of companyHistoricalPrices and errorHistoricalPrices
+   * abort the request if it is already active
+   * this function not use loading state
+   */
+  const fetchCompanyHistoricalPrices = async (ticker: string,from?:Date,abortController: AbortController | null = null) => {
+    abortIfControllerIsActive(abortController)
+    const url = API_CONFIG.BASE_URL + API_CONFIG.ENDPOINTS.HistoricalPrices(ticker,from)
+    
+    error.value = null
+    const response = await customFetch<HistoricalPrice[]>(url,{signal: abortController?.signal})
+
+    if(response.ok){
+      companyHistoricalPrices.value = response.data
+    }else{
+      error.value = response.errorType !== ErrorType.ABORT_ERROR ? response.error : null 
+    }
+  }
+
   const fetchCompanyPredictions = async (ticker: string) => {
     abortIfControllerIsActive(companyPredictionsCancellationToken.value)
     companyPredictionsCancellationToken.value = new AbortController()  
@@ -130,8 +151,9 @@ export const useTickersStore = defineStore('tickers', () => {
     if(response.ok){
       companyPredictions.value = response.data
     }else{
-      errorPredictions.value = response.errorType !== ErrorType.ABORT_ERROR ? response.error : null 
+      errorPredictions.value = response.errorType !== ErrorType.ABORT_ERROR ? response.error : "" 
     }  
+
   }
 
   return {
@@ -141,7 +163,9 @@ export const useTickersStore = defineStore('tickers', () => {
     loading,
     error,
     errorPredictions,
+    errorHistoricalPrices,
     totalPages,
+    companyHistoricalPrices,
     
     // Pagination state
     currentPage,
@@ -153,6 +177,7 @@ export const useTickersStore = defineStore('tickers', () => {
     companyPredictions,
     fetchCompanyOverView,
     fetchCompanyPredictions,
-    fetchTickers
+    fetchTickers,
+    fetchCompanyHistoricalPrices
   }
 })

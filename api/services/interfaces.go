@@ -3,10 +3,11 @@ package services
 import (
 	"api/models"
 	"context"
+	"time"
 )
 
 type HistoricalPriceService interface {
-	GetHistoricalPrices(ctx context.Context, ticker string, from string, to string) ([]models.HistoricalPrice, error)
+	GetHistoricalPrices(ctx context.Context, ticker string, from time.Time, to time.Time) ([]models.HistoricalPrice, error)
 }
 
 type LogoService interface {
@@ -19,5 +20,5 @@ type CompanyDataService interface {
 }
 
 type CompanyNewsService interface {
-	GetNews(ctx context.Context, ticker string, from string, to string) ([]models.CompanyNew, error)
+	GetNews(ctx context.Context, ticker string, from time.Time, to time.Time) ([]models.CompanyNew, error)
 }

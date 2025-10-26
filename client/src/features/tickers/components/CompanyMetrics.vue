@@ -1,7 +1,8 @@
 <template>
   <div>
+    <v-card>
     <v-card-title class="pa-4 py-4">
-      <h3 class="text-body-1 font-weight-medium text-grey-darken-3">
+      <h3 class="text-body-1 font-weight-medium text-black">
         Key Metrics
       </h3>
     </v-card-title>
@@ -51,37 +52,10 @@
             type="number"
             explanation="The amount of money paid to shareholders for each share of stock."
           />
-        </v-col>
-<!--         
-        <v-col cols="6" class="pa-1">
-          <KeyMetric 
-            title="Sector" 
-            :value="companyData.sector" 
-            type="string"
-            explanation="The industry or sector in which a company operates."
-          />
-        </v-col>
-        
-        <v-col cols="6" class="pa-1">
-          <KeyMetric 
-            title="Industry" 
-            :value="companyData.industry" 
-            type="string"
-            explanation="The industry or sector in which a company operates."
-          />
-        </v-col>
-        
-        <v-col cols="6" class="pa-1">
-          <KeyMetric 
-            title="Industry" 
-            :value="companyData.industry" 
-            type="string"
-            explanation="The industry or sector in which a company operates."
-          />
-        </v-col> -->
-      
+        </v-col> 
       </v-row>
     </v-card-text>
+    </v-card>
   </div>
 </template>
 

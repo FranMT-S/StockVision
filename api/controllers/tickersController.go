@@ -115,9 +115,14 @@ func (c *TickersController) ListTickers(w http.ResponseWriter, r *http.Request) 
 // GetTickerOverview retrieves a single ticker by ID with its recommendations
 // Path param: id (string)
 func (c *TickersController) GetTickerOverview(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
-
 	var tickerOverview responses.CompanyOverview
+	id := chi.URLParam(r, "id")
+	from, _, err := parseDateRange(r)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
 	ctxCancel, cancelManual := context.WithTimeout(r.Context(), 60*time.Second)
 	defer cancelManual()
 
@@ -158,7 +163,7 @@ func (c *TickersController) GetTickerOverview(w http.ResponseWriter, r *http.Req
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		historicalPrices, err := c.tickerService.GetHistoricalPrices(ctxCancel, id, "", "")
+		historicalPrices, err := c.tickerService.GetHistoricalPrices(ctxCancel, id, from, time.Time{})
 		if err != nil {
 			apilogger.Logger().Error().Err(err).Msg("[GetTickerOverview] Failed to retrieve historical prices with ID:" + id)
 			tickerOverview.HistoricalPrices = []models.HistoricalPrice{}
@@ -181,7 +186,8 @@ func (c *TickersController) GetTickerOverview(w http.ResponseWriter, r *http.Req
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		companyNews, err := c.tickerService.GetNews(ctxCancel, id, "", "")
+		yearAgo := time.Now().AddDate(-1, 0, 0)
+		companyNews, err := c.tickerService.GetNews(ctxCancel, id, yearAgo, time.Now())
 		if err != nil {
 			apilogger.Logger().Error().Err(err).Msg("[GetTickerOverview] Failed to retrieve company news with ID:" + id)
 			tickerOverview.CompanyNews = []models.CompanyNew{}
@@ -222,12 +228,10 @@ func (c *TickersController) GetTickerPredictions(w http.ResponseWriter, r *http.
 		return
 	}
 
-	now := time.Now().Format("2006-01-02")
-	// 45 days before, not all days have stock data, so we use 45 days
-	before := time.Now().AddDate(0, 0, -45).Format("2006-01-02")
+	now := time.Now()
+	before := time.Now().AddDate(0, 0, -30)
 
 	historicalPrices, err := c.tickerService.GetHistoricalPrices(ctxCancel, id, before, now)
-	fmt.Println(len(historicalPrices))
 	if err != nil {
 		apilogger.Logger().Error().Err(err).Msg("[GetTickerPredictions] Failed to retrieve historical prices with ID:" + id)
 		respondError(w, http.StatusInternalServerError, "Failed in generate predictions, try again later")
@@ -266,6 +270,42 @@ func (c *TickersController) GetRecommendations(w http.ResponseWriter, r *http.Re
 	})
 }
 
+// Get The the historical prices of a ticker
+func (c *TickersController) GetTickerHistoricalPrices(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	from, to, err := parseDateRange(r)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	ctxCancel, cancelManual := context.WithTimeout(r.Context(), 60*time.Second)
+	defer cancelManual()
+
+	_, err = c.tickerService.GetTickerByID(ctxCancel, id)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			respondError(w, http.StatusNotFound, "Ticker not found")
+			return
+		}
+
+		apilogger.Logger().Error().Err(err).Msg("[GetTickerHistoricalPrices] Failed to retrieve ticker with ID:" + id)
+		respondError(w, http.StatusInternalServerError, "Failed to retrieve ticker")
+		return
+	}
+
+	historicalPrices, err := c.tickerService.GetHistoricalPrices(ctxCancel, id, from, to)
+	if err != nil {
+		apilogger.Logger().Error().Err(err).Msg("[GetTickerHistoricalPrices] Failed to retrieve historical prices with ID:" + id)
+		respondError(w, http.StatusInternalServerError, "Failed to retrieve historical prices")
+		return
+	}
+
+	respondJSON(w, http.StatusOK, map[string]interface{}{
+		"data": historicalPrices,
+	})
+}
+
 // parseFilters extracts pagination and ordering parameters from query string
 func parseFilters(r *http.Request) filters.Filters {
 	query := r.URL.Query()
@@ -291,6 +331,37 @@ func parseFilters(r *http.Request) filters.Filters {
 		Sort:     sort,
 		Query:    queryStr,
 	}
+}
+
+// parseDateRange extracts date range parameters from query string
+// validate the format is correct
+// validate that to is not before from
+func parseDateRange(r *http.Request) (time.Time, time.Time, error) {
+	from := r.URL.Query().Get("from")
+	to := r.URL.Query().Get("to")
+	var err error
+
+	var fromTime time.Time
+	if from != "" {
+		fromTime, err = time.Parse("2006-01-02", from)
+		if err != nil {
+			return time.Time{}, time.Time{}, fmt.Errorf("invalid from date format: the format must be YYYY-MM-DD")
+		}
+	}
+
+	var toTime time.Time
+	if to != "" {
+		toTime, err = time.Parse("2006-01-02", to)
+		if err != nil {
+			return time.Time{}, time.Time{}, fmt.Errorf("invalid to date format: the format must be YYYY-MM-DD")
+		}
+
+		if fromTime.After(toTime) {
+			return time.Time{}, time.Time{}, fmt.Errorf("'To' date cannot be earlier than 'From' date")
+		}
+	}
+
+	return fromTime, toTime, nil
 }
 
 // Helper functions

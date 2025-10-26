@@ -4,3 +4,8 @@
 @import 'tailwindcss/utilities';
 
 /* Custom styles can be added below */
+.v-btn,
+.btn,
+button {
+  outline: none !important;
+}
