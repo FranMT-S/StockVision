@@ -3,7 +3,11 @@ package cache
 import (
 	"context"
 	"time"
+
+	"golang.org/x/sync/singleflight"
 )
+
+var group singleflight.Group
 
 // Cache is the interface for the cache
 // get retrieve a value from the cache
@@ -21,27 +25,39 @@ type ICache interface {
 // if the cache is nil, it will load the value using the loader function
 func GetOrLoad[T any](ctx context.Context, cache ICache, key string, expiration time.Duration, loadFunc func() (T, error)) (T, error) {
 	var value T
+	var zero T
 	var err error
 
-	// if cache is nil, return the result of loadFunc
-	if cache == nil {
+	// if cache is nil or key is empty, return the result of loadFunc
+	if cache == nil || key == "" {
 		return loadFunc()
 	}
 
-	if key != "" {
-		err = cache.Get(ctx, key, &value)
-		if err == nil {
-			return value, nil
+	err = cache.Get(ctx, key, &value)
+	if err == nil {
+		return value, nil
+	}
+
+	// prevent multiple requests update the cache for the same key
+	result, err, _ := group.Do(key, func() (interface{}, error) {
+		// security validate if not is cached
+		var cached T
+		if e := cache.Get(ctx, key, &cached); e == nil {
+			return cached, nil
 		}
-	}
 
-	// if cache miss, load the value using the loader function
-	value, err = loadFunc()
+		// if cache miss, load the value using the loader function
+		_value, _err := loadFunc()
+		if _err != nil {
+			return _value, _err
+		}
+		cache.Set(ctx, key, _value, expiration)
+		return _value, nil
+	})
+
 	if err != nil {
-		return value, err
+		return zero, err
 	}
 
-	// set the value in the cache
-	cache.Set(ctx, key, value, expiration)
-	return value, nil
+	return result.(T), nil
 }
