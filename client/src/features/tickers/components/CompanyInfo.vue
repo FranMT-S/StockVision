@@ -1,10 +1,10 @@
 <template>
   <div class="tw-p-0 tw-m-0 tw-mt-1 md:tw-mt-0 tw-flex tw-flex-col">
-    <div class="tw-flex tw-flex-row tw-items-center tw-justify-between tw-relative">
+    <div class="tw-flex tw-flex-row tw-items-center tw-justify-between lg:tw-justify-start tw-relative tw-ps-[10px]">
+      <section class="lg:tw-min-w-[20%] lg:tw-max-w-[60px] lg:tw-max-h-[60px] tw-self-start">
+        <img  width="60" height="60" :src="companyData.image" alt="Company Logo" class="company-logo logo tw-self-baseline">
+      </section>
       <section class="tw-flex tw-flex-row tw-items-start md:tw-items-center tw-w-full">
-        <div>
-          <img width="60" height="60" :src="companyData.image" alt="Company Logo" class="company-logo logo tw-self-baseline">
-        </div>
         <div class="md:text-h6  font-weight-medium  dark:tw-text-[#ffffff] tw-w-full">
           <section class=" ">
             <div class="tw-flex tw-flex-row tw-items-center tw-gap-2">
@@ -29,7 +29,7 @@
               </div>
             </section>
           </section>
-          <section class=" tw-flex tw-flex-row tw-gap-2  ">
+          <section class=" tw-flex tw-flex-row tw-gap-2 lg:tw-flex-col ">
             <v-chip class="tw-text-[#717171] pa-0" v-if="companyData.sector" color="secondary" size="small" variant="text" >
               <v-tooltip text="Sector" location="top">  
                 <template #activator="{ props }">
@@ -38,13 +38,15 @@
               </v-tooltip>
               {{ companyData.sector  }}
             </v-chip>
-            <v-chip v-if="companyData.industry" class="tw-text-[#717171] pa-0" color="secondary" size="small" variant="text">
+            <v-chip v-if="companyData.industry" class="tw-text-[#717171] pa-0 lg:!tw-h-full" color="secondary" size="small" variant="text">
               <v-tooltip text="Industry" location="top">
                 <template #activator="{ props }">
-                  <v-icon v-bind="props" icon="mdi-briefcase" size="16" />
+                  <v-icon class="lg:tw-self-center lg:tw-z-30" v-bind="props" icon="mdi-briefcase"  />
                 </template>
               </v-tooltip>
-              <p class="tw-break-words">{{ companyData.industry }}</p>
+               <div class="tw-whitespace-normal tw-break-words lg-tw-max-w-[120px] tw-line-clamp-1">
+                {{ companyData.industry }}
+              </div>
             </v-chip>
           </section>
         </div>

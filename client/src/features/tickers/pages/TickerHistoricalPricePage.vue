@@ -21,16 +21,16 @@
 
       <!-- Main Content -->
       <div v-else-if="tickerData" class="ticker-content">
-        <v-row class="mb-0 tw-relative tw-justify-end tw-px-[4px] lg:tw-px-0">
+        <v-row class="mb-0 tw-relative tw-justify-end tw-px-[4px] lg:tw-pt-[15px] lg:tw-px-[20px] xl:tw-pe-0 ">
           <v-col :cols="columns.side"
-           class="tw-bg-[#ffffff] lg:tw-shadow-sm  md:tw-p-4 tw-border-l-2 tw-rounded-lg dark:tw-bg-[#1e1e1e] dark:tw-text-white lg:tw-sticky md:tw-top-[84px] px-0 !tw-pt-4 !tw-ps-[20px]"
+           class="tw-bg-[#ffffff] lg:tw-shadow-sm  md:tw-p-4 tw-border-l-2 tw-rounded-lg dark:tw-bg-[#1e1e1e] dark:tw-text-white lg:tw-sticky md:tw-top-[84px] !tw-px-0 !tw-pt-4 lg:!tw-px-[5px] lg:tw-flex lg:tw-flex-col lg:tw-gap-4"
             :class="{ 'tw-h-[calc(100vh_-_100px)]': isLargeDesktop }"
           >
             <!-- Company Information -->
             <CompanyInfo 
-              
               :company-data="tickerData.companyData"
             />
+
             <!-- Company Metrics -->
             <CompanyMetrics 
               :company-data="tickerData.companyData"
@@ -55,7 +55,7 @@
               :predictNextWeek="companyPredictions"
               :predictError="errorPredictions"
               :isPredictLoading="isPredictLoading"
-              :isTouchDevice="isTouchable"
+              :isTouchDevice="isTouchable || isTablet"
             />
 
             <AdviceBanner 

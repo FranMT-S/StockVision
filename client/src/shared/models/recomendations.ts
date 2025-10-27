@@ -58,6 +58,19 @@ export interface HistoricalPrice{
   vwap: number;
 }
 
+export interface StockHLOC {
+    time: string;
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+    volume: number;
+    change: number;
+    changePercent: number;
+    vwap: number;
+    date: Date;
+}
+
 export interface CompanyNew {
   id: number;
   category: string;
@@ -82,4 +95,5 @@ export interface CompanyOverview {
 export interface TickerListResponse{
   ticker:Ticker,
   companyData:CompanyData
+  advice: string;
 }

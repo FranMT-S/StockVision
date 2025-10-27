@@ -99,7 +99,7 @@ watch(
 
 const tableRows: ComputedRef<TickerRow[]> = computed(() => {
   let rows: TickerRow[] = []
-  tickers.value.map(({companyData, ticker}) => {
+  tickers.value.map(({companyData, ticker,advice}) => {
     rows.push({
       ticker: ticker.id,
       companyName: companyData.companyName,
@@ -108,10 +108,11 @@ const tableRows: ComputedRef<TickerRow[]> = computed(() => {
       change: companyData.change,
       changePercentage: companyData.changePercentage,
       sentiment: ticker.sentiment,
-      lastRatingDate: ticker.recommendations?.[0].time || 'Not available'
+      lastRatingDate: ticker.recommendations?.[0].time || 'Not available',
+      advice: advice.split('.')[0] || 'Not available'
     })  
   })
-
+  
   return rows
 })
 

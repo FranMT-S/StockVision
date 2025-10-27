@@ -52,34 +52,32 @@
 
 
 <script setup lang="ts">
+import FloatingTooltip from '@/shared/components/FloatingTooltip.vue';
+import { useDebounce } from '@/shared/composables/useDebounce';
 import { Timeframe } from '@/shared/enums/timeFrame';
-import { ref, onMounted, onUnmounted, watch, computed, ComputedRef, reactive, shallowReactive } from 'vue';
-import { 
-  createChart, 
-  IChartApi, 
-  ISeriesApi, 
+import { CompanyNew, HistoricalPrice, StockHLOC } from '@/shared/models/recomendations';
+import html2canvas from 'html2canvas';
+import {
+  AreaData,
+  AreaSeries,
+  AreaSeriesPartialOptions,
   CandlestickData,
   CandlestickSeries,
-  HistogramSeries,
-  HistogramData,
-  MouseEventParams,
-  Time,
-  AreaSeries,
-  AreaData,
   CandlestickSeriesPartialOptions,
-  HistogramSeriesPartialOptions,
-  AreaSeriesPartialOptions,
-  LineStyle,
+  createChart,
   CrosshairMode,
-  createSeriesMarkers,
-  SeriesMarker
+  HistogramData,
+  HistogramSeries,
+  HistogramSeriesPartialOptions,
+  IChartApi,
+  ISeriesApi,
+  LineStyle,
+  MouseEventParams,
+  SeriesMarker,
+  Time
 } from 'lightweight-charts';
-import { CompanyNew, HistoricalPrice} from '@/shared/models/recomendations';
-import html2canvas from 'html2canvas';
-import FloatingTooltip from '@/shared/components/FloatingTooltip.vue';
+import { computed, ComputedRef, onMounted, onUnmounted, ref, shallowReactive, watch } from 'vue';
 import CrossHairDetails from './CrossHairDetails.vue';
-import { debounce } from 'vuetify/lib/util/helpers.mjs';
-import { useDebounce } from '@/shared/composables/useDebounce';
 
 interface Props {
   ticker: string;
@@ -105,19 +103,7 @@ type CharData = {
   mainChartData: CandlestickData[], 
   volumeChartData: HistogramData[],
   areaChartData: AreaData[]
-}
-
-interface StockHLOC {
-    time: string;
-    open: number;
-    high: number;
-    low: number;
-    close: number;
-    volume: number;
-    change: number;
-    changePercent: number;
-    vwap: number;
-    date: Date;
+  stockHLOC: StockHLOC[]
 }
 
 enum Scales {
@@ -150,7 +136,7 @@ const timeframe = ref(props.initialInterval);
 const visibleRange = ref<{ from: Time; to: Time } | null>(null);
 const isShowPredict = ref<boolean>(false);
 const isGeneratingScreenshot = ref<boolean>(false);
-const selectedCrosshairData = ref<HistoricalPrice | null>(null);
+const selectedCrosshairData = ref<StockHLOC | null>(null);
 
 const timeframeOptions =ref([
     { value: Timeframe['1M'], label: '1M' },
@@ -211,10 +197,10 @@ const series = shallowReactive<Record<TSeriesType, ISeriesApi<any> | null>>({
 
 const predictChartData: ComputedRef<{
   mainChartData: CandlestickData[], 
-  volumeChartData: HistogramData[]
+  volumeChartData: HistogramData[],
+  stockHLOC: StockHLOC[]
 }> = computed(() => {
-  console.log("change data")
-  if (!props.predictNextWeek) return {mainChartData: [], volumeChartData: []};
+  if (!props.predictNextWeek) return {mainChartData: [], volumeChartData: [], stockHLOC: []};
   const filteredData = props.predictNextWeek.filter((stock) => {
     const stockDate = new Date(stock.date);
     const tomorrow = new Date();
@@ -238,9 +224,10 @@ const chartData: ComputedRef<{
   mainChartData: CandlestickData[], 
   volumeChartData: HistogramData[]
   areaChartData: AreaData[]
+  stockHLOC: StockHLOC[]
 }> = computed(() => {
   if (!props.historicalData) 
-    return {mainChartData: [], volumeChartData: [], areaChartData: []};
+    return {mainChartData: [], volumeChartData: [], areaChartData: [], stockHLOC: []};
   
   const orderedData = creteaStockHLOC(props.historicalData);
   return createCandleCharData(orderedData);
@@ -258,11 +245,11 @@ const creteaStockHLOC = (data: HistoricalPrice[]) : StockHLOC[] => {
 }
 
 const createCandleCharData = (data: StockHLOC[],color?:CandleChardColor) : CharData => {
-  if (!data) return {mainChartData: [], volumeChartData: [], areaChartData: []};
+  if (!data) return {mainChartData: [], volumeChartData: [], areaChartData: [], stockHLOC: []};
   const mainChartData: CandlestickData[] = [];
   const volumeChartData: HistogramData[] = [];
   const areaChartData: AreaData[] = [];
-  
+
   if (!color) {
     color = {
       upColor: '#26a69a',
@@ -297,13 +284,10 @@ const createCandleCharData = (data: StockHLOC[],color?:CandleChardColor) : CharD
     })
   }
 
-  return { mainChartData, volumeChartData,areaChartData }
+  return { mainChartData, volumeChartData,areaChartData, stockHLOC:data }
 }
 
-  type MarkerExtended = Omit<SeriesMarker<CandlestickData | AreaData>, 'time' | 'id'> & Pick<CompanyNew,'url' | 'headline'> & {
-    time: string;
-    id: string;
-  }
+
 
 // build the container to visualize the chart
 const initChart = () => {
@@ -360,8 +344,8 @@ const initChart = () => {
 
 };
 
-// hadnlers
 
+// hadnlers
 const handlerCossHairMove = (param: MouseEventParams) => {
 
     const index = param.logical;
@@ -370,12 +354,14 @@ const handlerCossHairMove = (param: MouseEventParams) => {
       return;
     } 
     
+    console.log(index)
+    console.log( chartData.value.stockHLOC[index])
     if(index <= props.historicalData.length){
-      selectedCrosshairData.value = props.historicalData[index];
+      selectedCrosshairData.value = chartData.value.stockHLOC[index];
     }
 
     if(index > props.historicalData.length){
-      selectedCrosshairData.value = props.predictNextWeek[index - props.historicalData.length + 1];
+      selectedCrosshairData.value = predictChartData.value.stockHLOC[index - props.historicalData.length + 1];
     }
     
   }
@@ -599,6 +585,16 @@ watch(() => props.predictNextWeek, async () => {
   createMainSeries()
 });
 
+watch(() => props.isTouchDevice, (newTouchable) => {
+  if(chart){
+    chart.applyOptions({
+      handleScroll: !newTouchable,
+      handleScale: !newTouchable,
+    });
+  }
+
+  createMainSeries();
+});
 
 watch(visibleRange, () => {
   if (chart) {

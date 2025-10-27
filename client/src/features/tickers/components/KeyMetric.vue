@@ -2,7 +2,9 @@
   <div class="metric-item tw-flex tw-flex-col pa-1  rounded tw-bg-neutral-100">
     <div class="tw-flex tw-flex-row tw-items-center ga-1 justify-center">
       <div class="text-caption text-grey-darken-1 ">{{ title }}</div>
-      <v-tooltip interactive open-on-click max-width="150px" location="start">
+      <v-tooltip interactive  
+         open-on-click
+        :close-on-content-click="false" max-width="150px" location="start">
         <template v-slot:activator="{ props }">
           <v-icon size="small" v-bind="props" icon="mdi-information-outline" />
         </template>

@@ -6,6 +6,7 @@
         <th class="text-left font-weight-bold text-grey-darken-2 pa-1">Price</th>
         <th class="text-left font-weight-bold text-grey-darken-2 pa-1">Change</th>
         <th class="text-center font-weight-bold text-grey-darken-2 pa-1">Sentiment</th>
+        <th class="text-center font-weight-bold text-grey-darken-2 pa-1">Action Advice</th>
         <th class="text-center font-weight-bold text-grey-darken-2 pa-1">Last Rating Date</th>
       </tr>
     </thead>
@@ -78,6 +79,31 @@
               size="small"
             />
           </v-avatar>
+            <v-chip size="small"
+            class="tw-capitalize"  
+            :color="getSentimentColor(stock.sentiment)" 
+            variant="outlined"
+          >
+            {{ stock.sentiment }}
+          </v-chip>
+        </td>
+
+          <!-- Action Advice Column -->
+        <td class="text-center pa-2 py-0">
+          <v-avatar size="24">
+            <v-icon 
+              :icon="getAdviceActionIcon(stock.advice)"
+              :class="getAdviceActionColor(stock.advice).class"
+              size="small"
+            />
+          </v-avatar>
+          <v-chip size="small"
+            class="tw-capitalize"  
+            :color="getAdviceActionColor(stock.advice).vuetify" 
+            variant="outlined"
+          >
+            {{ stock.advice }}
+          </v-chip>
         </td>
 
         <td class="text-center pa-2 py-0">
@@ -89,6 +115,9 @@
 </template>
 
 <script setup lang="ts">
+import { getAdviceActionColor, getAdviceActionIcon } from '@/shared/helpers/adviceActions'
+import { getSentimentColor, getSentimentIcon } from '@/shared/helpers/sentiment'
+
 
 export interface TickerRow {
   ticker: string
@@ -99,6 +128,7 @@ export interface TickerRow {
   changePercentage: number
   sentiment: string
   lastRatingDate: string | Date
+  advice: string
 }
 
 interface Props {
@@ -131,18 +161,6 @@ const getChangeColorClass = (change: number): string => {
   return change >= 0 ? 'text-green-darken-2' : 'text-red-darken-2'
 }
 
-const getSentimentIcon = (sentiment: string): string => {
-  switch (sentiment.toLowerCase()) {
-    case 'positive':
-      return 'mdi-emoticon-happy'
-    case 'negative':
-      return 'mdi-emoticon-sad'
-    case 'neutral':
-      return 'mdi-emoticon-neutral'
-    default:
-      return ''
-  }
-}
 
 const getDateString = (date: string | Date): string => {
   if (!date) return '';
@@ -156,16 +174,6 @@ const getDateString = (date: string | Date): string => {
   return d.toLocaleDateString();
 }
 
-const getSentimentColor = (sentiment: string): string => {
-  switch (sentiment.toLowerCase()) {
-    case 'positive':
-      return 'green'
-    case 'negative':
-      return 'red'
-    default:
-      return 'orange'
-  }
-}
 
 const handleRowClick = (stock: TickerRow) => {
   emit('rowClick', stock)
@@ -201,16 +209,4 @@ const handleRowClick = (stock: TickerRow) => {
   font-size: 0.875rem !important;
   line-height: 1.25rem !important;
 }
-
-/* :deep(.recommendations-table td),
-:deep(.recommendations-table th) {
-  padding-top: 2px !important;
-  padding-bottom: 2px !important;
-  height: 22px !important;
-  line-height: 1rem !important;
-}
-
-.stock-row {
-  height: 18px!important;
-} */
 </style>

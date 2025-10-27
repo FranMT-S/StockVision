@@ -88,6 +88,7 @@ func (c *TickersController) ListTickers(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
+	var twentyDaysAgo time.Time = time.Now().AddDate(0, 0, -20)
 	var wg sync.WaitGroup
 	// Get company data
 	for i, rec := range recomendations {
@@ -100,7 +101,18 @@ func (c *TickersController) ListTickers(w http.ResponseWriter, r *http.Request) 
 				apilogger.Logger().Error().Err(err).Msg("[ListTickers] Failed to retrieve company data with ID:" + string(r.Ticker.ID))
 			}
 
+			historicalPrices, err := c.tickerService.GetHistoricalPrices(ctxCancel, string(r.Ticker.ID), twentyDaysAgo, time.Time{})
+			if err != nil {
+				apilogger.Logger().Error().Err(err).Msg("[ListTickers] Failed to retrieve historical prices with ID:" + string(r.Ticker.ID))
+			}
+
+			advice, err := geminiai.GenerateAdvice(string(r.Ticker.ID), historicalPrices, 20, c.cache)
+			if err != nil {
+				apilogger.Logger().Error().Err(err).Msg("[ListTickers] Failed to retrieve stock analysis with ID:" + string(r.Ticker.ID))
+			}
+
 			recomendations[index].CompanyData = companyData
+			recomendations[index].Advice = advice
 		}(i, rec)
 	}
 

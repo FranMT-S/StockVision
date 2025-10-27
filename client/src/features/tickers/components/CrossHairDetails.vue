@@ -2,34 +2,35 @@
   <div>
     <div class="tw-flex tw-flex-col tw-gap-1">
       <div class="tw-flex tw-flex-row tw-gap-2 tw-items-center">
-        <span class="tw-text-[13px] tw-font-medium ">Price:</span>
-        <span class="tw-text-[12px] tw-font-medium">{{ props.data.close?.toFixed(2) }}</span>
-     </div>
+        <span class="tw-text-[13px] tw-font-medium ">V:</span>
+        <span class="tw-text-[12px] tw-font-medium">{{  humanizeNumberFormat(props.data.volume) }}</span>
+      </div>
+      <div  class="tw-flex tw-flex-row tw-gap-2 tw-items-center">
+        <span class="tw-text-[13px] tw-font-medium ">O:</span>
+        <span class="tw-text-[12px] tw-font-medium">{{ humanizeNumberFormat(props.data.open) }}</span>
+      </div>
       <div class="tw-flex tw-flex-row tw-gap-2 tw-items-center">
-        <span class="tw-text-[13px] tw-font-medium ">Volume:</span>
-        <span class="tw-text-[12px] tw-font-medium">{{ props.data.volume.toLocaleString() }}</span>
+        <span class="tw-text-[13px] tw-font-medium ">C:</span>
+        <span class="tw-text-[12px] tw-font-medium">{{ humanizeNumberFormat(props.data.close) }}</span>
+     </div>
+      <div  class="tw-flex tw-flex-row tw-gap-2 tw-items-center">
+        <span class="tw-text-[13px] tw-font-medium ">H:</span>
+        <span class="tw-text-[12px] tw-font-medium">{{ humanizeNumberFormat(props.data.high) }}</span>
       </div>
       <div  class="tw-flex tw-flex-row tw-gap-2 tw-items-center">
-        <span class="tw-text-[13px] tw-font-medium ">Open:</span>
-        <span class="tw-text-[12px] tw-font-medium">{{ props.data.open?.toFixed(2) }}</span>
-      </div>
-      <div  class="tw-flex tw-flex-row tw-gap-2 tw-items-center">
-        <span class="tw-text-[13px] tw-font-medium ">High:</span>
-        <span class="tw-text-[12px] tw-font-medium">{{ props.data.high?.toFixed(2) }}</span>
-      </div>
-      <div  class="tw-flex tw-flex-row tw-gap-2 tw-items-center">
-        <span class="tw-text-[13px] tw-font-medium ">Low:</span>
-        <span class="tw-text-[12px] tw-font-medium">{{ props.data.low?.toFixed(2) }}</span>
+        <span class="tw-text-[13px] tw-font-medium ">L:</span>
+        <span class="tw-text-[12px] tw-font-medium">{{ humanizeNumberFormat(props.data.low) }}</span>
       </div>  
     </div> 
   </div>
 </template>
   
 <script setup lang="ts">
-import { HistoricalPrice } from '@/shared/models/recomendations';
+import { humanizeNumberFormat } from '@/shared/helpers/formats';
+import { StockHLOC } from '@/shared/models/recomendations';
 
 interface Props {
-  data: HistoricalPrice
+  data: StockHLOC
 }
 
 const props = defineProps<Props>()

@@ -5,6 +5,10 @@ export const API_CONFIG = {
   BASE_URL: window.__ENV__?.VITE_API_URL || import.meta.env.VITE_API_URL || 'http://localhost:8080',
   ENDPOINTS: {
     List: function(q:string = '',page:number = 1,size: number = 10,sort: 'asc' | 'desc' = 'asc'){
+      if(!q || q == 'undefined') {
+        return `/api/v1/tickers?page=${page}&size=${size}&sort=${sort}`
+      }
+
       const qParam = q ? `&q=${q}` : ''
       return `/api/v1/tickers?page=${page}&size=${size}&sort=${sort}${qParam}`
     },
@@ -31,7 +35,6 @@ export const API_CONFIG = {
     },
   },
 };
-
 
 
 export const DEFAULT_PAGINATION = {

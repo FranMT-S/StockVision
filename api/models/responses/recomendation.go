@@ -7,6 +7,7 @@ import (
 type RecomendationResponse struct {
 	Ticker      models.Ticker      `json:"ticker"`
 	CompanyData models.CompanyData `json:"companyData"`
+	Advice      string             `json:"advice"`
 }
 
 type CompanyOverview struct {

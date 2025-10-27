@@ -1,5 +1,5 @@
 <template>
-  <div class="company-news-sidebar">
+  <section class="company-news-sidebar">
     <v-card-title class="pa-4">
       <h3 class="text-h6 font-weight-medium dark:tw-text-[#ffffff]">
         Company News
@@ -9,6 +9,7 @@
     <!-- News Cards -->
     <div class="news-container lg pa-2">
       <v-card
+        tag="article"
         v-for="news in companyNews"
         :key="news.id"
         class="news-card mb-3"
@@ -91,7 +92,7 @@
         <p class="text-body-2 text-grey-darken-1">No news available</p>
       </div>
     </div>
-  </div>
+  </section>
 </template>
 
 <script setup lang="ts">
