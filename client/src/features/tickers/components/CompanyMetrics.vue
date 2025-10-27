@@ -1,16 +1,15 @@
 <template>
   <div>
     <v-card>
-    <v-card-title class="pa-4 py-4">
+    <v-card-title class="md:tw-pa-4 tw-py-4">
       <h3 class="text-body-1 font-weight-medium text-black">
         Key Metrics
       </h3>
     </v-card-title>
     
-    <v-card-text class="pa-4 py-0">
+    <v-card-text class="pa-4 py-2 ">
       <v-row class="mb-0">
         <v-col cols="4" md="6" lg="12" class="pa-1">
-          <v-divider class="mb-3" />
           <KeyMetric 
             title="Market Cap" 
             :value="companyData.marketCap" 

@@ -7,7 +7,7 @@
     </v-card-title>
 
     <!-- News Cards -->
-    <div class="news-container pa-2">
+    <div class="news-container lg pa-2">
       <v-card
         v-for="news in companyNews"
         :key="news.id"
@@ -115,11 +115,6 @@ const truncateSummary = (summary: string, maxLength: number = 120): string => {
   overflow-y: auto;
 }
 
-.news-container {
-  max-height: calc(100vh - 200px);
-  overflow-y: auto;
-  overflow-x: hidden;
-}
 
 .news-container::-webkit-scrollbar {
   width: 6px;

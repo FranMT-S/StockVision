@@ -10,7 +10,8 @@
       <v-container fluid class="pa-0">
         <v-row align="center" no-gutters>
           <!-- Logo Section -->
-          <v-col cols="auto">
+          <v-col cols="auto" 
+          >
             <v-btn
               variant="text"
               class="text-h6 font-weight-bold"
@@ -25,7 +26,7 @@
           </v-col>
           
           <!-- Search Bar -->
-          <v-col cols="12" sm="8" md="6" lg="4" class="ml-4">
+          <v-col cols="12" sm="8" md="6" lg="4" class="ml-4 ">
            <v-text-field
             v-model="searchQuery"
             placeholder="Search by id or ticker..."
@@ -56,17 +57,9 @@
                 />
               </template>
             </v-text-field>
-          </v-col>
-          
+          </v-col>   
           <!-- Spacer and additional actions -->
           <v-spacer />
-          
-  
-          
-          <!-- Theme toggle and other actions can go here -->
-          <v-col cols="auto">
-            <ToggleTheme />
-          </v-col>
         </v-row>
       </v-container>
     </v-app-bar>
@@ -80,7 +73,6 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import ToggleTheme from '@shared/components/ToggleTheme.vue'
 import { useRouter } from 'vue-router'
 import { useRoute } from 'vuetify/lib/composables/router.mjs'
 import { RouterNames } from '@/router/names'

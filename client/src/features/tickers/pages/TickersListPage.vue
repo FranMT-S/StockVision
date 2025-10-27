@@ -116,12 +116,11 @@ const tableRows: ComputedRef<TickerRow[]> = computed(() => {
 })
 
 
-const { isMobile, isTablet, current } = useBreakpoints()
+const { isMobile, isTablet, isDesktop } = useBreakpoints()
 const visiblePages = computed(() => {
   if (isMobile.value)  return 6
   if (isTablet.value)  return 8
-  if(current.value === 'md')  return 12
-  if(current.value === 'lg')  return 16
+  if(isDesktop.value)  return 12
   
   return 20
 })

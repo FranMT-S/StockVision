@@ -109,7 +109,7 @@ func GeneratePredict(symbol string, historicalData []models.HistoricalPrice, day
 	}
 
 	key := fmt.Sprintf("GeminiAI:predict:%s-%s", symbol, time.Now().Format("2006-01-02"))
-	expiration := 10 * time.Minute
+	expiration := 30 * time.Minute
 
 	result, err := cache.GetOrLoad(ctx, c, key, expiration, func() ([]models.HistoricalPrice, error) {
 		if daysToPredict > 14 {
@@ -166,11 +166,12 @@ func buildPromptAdvice(symbol string, historicalData []models.HistoricalPrice, d
 	data := buildHistoricalDataString(symbol, historicalData, dayToAnalyze)
 	instructions := `	
 	1. Analyze recent price trends, volatility, and trading volume.
-	2. Determine if the current market behavior suggests BUY, HOLD, or SELL.
+	2. Determine if the current market [BEHAVIOR] suggests BUY, HOLD, or SELL.
 	3. Provide a short, clear, and realistic recommendation (max 10 words).
-	4. Include a one-sentence justification for the advice.
+	4. Include a one-sentence [JUSTIFICATION] for the advice.
 	5. The advice must be in English, plain text (no markdown or HTML).
 	6. Do NOT restate or summarize the data.
+	7. The format must be [Behavior]. [JUSTIFICATION]
 
 	Respond ONLY with the advice and justification.`
 

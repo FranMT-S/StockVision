@@ -42,7 +42,7 @@
 
  
     <!-- crosshair tooltip -->
-    <FloatingTooltip :visible="selectedCrosshairData !== null">
+    <FloatingTooltip :visible="selectedCrosshairData !== null && !isTouchDevice">
       <div class="tw-bg-black/70 tw-rounded tw-p-2 tw-text-white">
         <CrossHairDetails :data="selectedCrosshairData!" />
       </div>  
@@ -68,12 +68,18 @@ import {
   AreaData,
   CandlestickSeriesPartialOptions,
   HistogramSeriesPartialOptions,
-  AreaSeriesPartialOptions
+  AreaSeriesPartialOptions,
+  LineStyle,
+  CrosshairMode,
+  createSeriesMarkers,
+  SeriesMarker
 } from 'lightweight-charts';
-import { HistoricalPrice} from '@/shared/models/recomendations';
+import { CompanyNew, HistoricalPrice} from '@/shared/models/recomendations';
 import html2canvas from 'html2canvas';
 import FloatingTooltip from '@/shared/components/FloatingTooltip.vue';
 import CrossHairDetails from './CrossHairDetails.vue';
+import { debounce } from 'vuetify/lib/util/helpers.mjs';
+import { useDebounce } from '@/shared/composables/useDebounce';
 
 interface Props {
   ticker: string;
@@ -84,6 +90,7 @@ interface Props {
   predictNextWeek?: HistoricalPrice[];
   predictError?: string | null;
   isPredictLoading?: boolean;
+  isTouchDevice?: boolean;
 }
 
 type TSeriesType = 'Candlestick' | 'Line' | 'Area' | 'Histogram' | 'Predict' | 'PredictHistogram';
@@ -136,11 +143,10 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const emit = defineEmits(['update:timeframe','update:predict'])
-
+const {debounced} = useDebounce()
 const chartContainer = ref<HTMLElement | null>(null);
 const chartType = ref<ChartType>(ChartType['candlestick']);
 const timeframe = ref(props.initialInterval);
-const currentPrice = ref<CandlestickData | null>(null);
 const visibleRange = ref<{ from: Time; to: Time } | null>(null);
 const isShowPredict = ref<boolean>(false);
 const isGeneratingScreenshot = ref<boolean>(false);
@@ -294,6 +300,11 @@ const createCandleCharData = (data: StockHLOC[],color?:CandleChardColor) : CharD
   return { mainChartData, volumeChartData,areaChartData }
 }
 
+  type MarkerExtended = Omit<SeriesMarker<CandlestickData | AreaData>, 'time' | 'id'> & Pick<CompanyNew,'url' | 'headline'> & {
+    time: string;
+    id: string;
+  }
+
 // build the container to visualize the chart
 const initChart = () => {
   if (!chartContainer.value) return;
@@ -310,7 +321,18 @@ const initChart = () => {
       horzLines: { color: '#e1e1e1' },
     },
     crosshair: {
-      mode: 1,
+      mode: CrosshairMode.Normal,
+      vertLine: {
+          width: 4,
+          color: '#C3BCDB44',
+          style: LineStyle.Solid,
+          labelBackgroundColor: '#9B7DFF',
+      },
+
+      horzLine: {
+          color: '#9B7DFF',
+          labelBackgroundColor: '#9B7DFF',
+      },
     },
     timeScale: {
       borderColor: '#cccccc',
@@ -326,20 +348,21 @@ const initChart = () => {
     },
     localization: {
       priceFormatter: (price: number) => `${price.toFixed(2)}$`,
-    }
-
+    },
+    handleScroll:!props.isTouchDevice,
+    handleScale:!props.isTouchDevice,
   });
 
   createMainSeries();
 
-  const dataToUse = chartData.value.mainChartData;
-  
-  if (dataToUse.length > 0) {
-    currentPrice.value = dataToUse[dataToUse.length - 1];
-  }
-
   // crosshair to show modal when hover over the chart
-  chart.subscribeCrosshairMove((param: MouseEventParams) => {
+  chart.subscribeCrosshairMove(handlerCossHairMove);
+
+};
+
+// hadnlers
+
+const handlerCossHairMove = (param: MouseEventParams) => {
 
     const index = param.logical;
     if(index === undefined || index < 0){
@@ -355,11 +378,7 @@ const initChart = () => {
       selectedCrosshairData.value = props.predictNextWeek[index - props.historicalData.length + 1];
     }
     
-  });
-
-};
-
-
+  }
 
 // create the way to show the chart
 const createMainSeries = () => {
@@ -523,12 +542,14 @@ const zoomBasedInIntervalTime = () => {
 
 
 const handleResize = () => {
-  if (chart && chartContainer.value) {
-    chart.applyOptions({
-      width: chartContainer.value.clientWidth,
-    });
-  }
-};
+  debounced(() =>{
+    if (chart && chartContainer.value) {
+      chart.applyOptions({
+        width: chartContainer.value.clientWidth,
+      });
+    }
+  }, 100)
+}
 
 const GoToLastStock = () => {
   if (!chart) return;
@@ -625,6 +646,7 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize);
   if (chart) {
+    chart.unsubscribeCrosshairMove(handlerCossHairMove);
     chart.remove();
   }
 });
@@ -748,19 +770,5 @@ onUnmounted(() => {
   margin-bottom: 0;
 }
 
-@media (max-width: 768px) {
-  .chart-controls {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  
-  .controls-left,
-  .controls-right {
-    justify-content: center;
-  }
-  
-  .price-info {
-    justify-content: center;
-  }
-}
+
 </style>

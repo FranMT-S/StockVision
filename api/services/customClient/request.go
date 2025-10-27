@@ -9,7 +9,7 @@ import (
 	"net/url"
 )
 
-// doRequest ejecuta la petición HTTP
+// doRequest execute a  HTTP request
 func (c *CustomClient) doRequest(method, endpoint string, queryParams map[string]string, body interface{}, result interface{}) error {
 	bodyBytes, err := c.doRequestRaw(method, endpoint, queryParams, body)
 	if err != nil {
@@ -26,6 +26,7 @@ func (c *CustomClient) doRequest(method, endpoint string, queryParams map[string
 	return nil
 }
 
+// doRequestRaw execute a HTTP request without parsing the response
 func (c *CustomClient) doRequestRaw(method, endpoint string, queryParams map[string]string, body interface{}) ([]byte, error) {
 	req, err := c.BuildRequest(method, endpoint, queryParams, body)
 	if err != nil {
@@ -42,6 +43,7 @@ func (c *CustomClient) doRequestRaw(method, endpoint string, queryParams map[str
 	return c.validateAndProcessBody(resp)
 }
 
+// BuildRequest builds a HTTP request
 func (c *CustomClient) BuildRequest(method, endpoint string, queryParams map[string]string, body interface{}) (*http.Request, error) {
 	// 1. build url
 	fullURL, err := c.buildURL(endpoint, queryParams)
@@ -67,7 +69,7 @@ func (c *CustomClient) BuildRequest(method, endpoint string, queryParams map[str
 	return req, nil
 }
 
-// buildURL construye la URL completa con query params
+// buildURL builds the URL with query params
 func (c *CustomClient) buildURL(endpoint string, queryParams map[string]string) (string, error) {
 	fullURL := c.BaseURL + endpoint
 

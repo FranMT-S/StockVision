@@ -1,49 +1,58 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 
-type Breakpoint = 'xs' | 'mobile' | 'sm' | 'md' | 'lg' | 'xl'
+type Breakpoint = 'xs' | 'sm' | 'md' | 'lg' | 'xl'
 
 const breakpoints = {
-  xs: 0,
-  mobile: 480,
-  sm: 600,
-  md: 960,
-  lg: 1280,
-  xl: 1920,
+  xs: 0,      // small phones
+  sm: 480,    // large phones
+  md: 768,    // tablets
+  lg: 1024,   // laptops / small desktop
+  xl: 1280,   // large desktop
 }
 
 export const useBreakpoints = () => {
-  const width = ref(window.innerWidth)
+  const screenWidth = ref(window.innerWidth)
+  const isTouchable = ref(false)
 
-  const onResize = () => {
-    width.value = window.innerWidth
+  const updateWidth = () => {
+    screenWidth.value = window.innerWidth
+  }
+
+    const detectTouch = () => {
+    isTouchable.value = 'ontouchstart' in window || navigator.maxTouchPoints > 0
   }
 
   onMounted(() => {
-    window.addEventListener('resize', onResize)
+    window.addEventListener('resize', updateWidth)
+    detectTouch()
   })
-
+  
   onUnmounted(() => {
-    window.removeEventListener('resize', onResize)
+    window.removeEventListener('resize', updateWidth)
+    detectTouch()
   })
 
-  const current = computed<Breakpoint>(() => {
-    if (width.value < breakpoints.mobile) return 'xs'
-    if (width.value < breakpoints.sm) return 'mobile'
-    if (width.value < breakpoints.md) return 'sm'
-    if (width.value < breakpoints.lg) return 'md'
-    if (width.value < breakpoints.xl) return 'lg'
+  const breakpoint = computed<Breakpoint>(() => {
+    const w = screenWidth.value
+    if (w < breakpoints.sm) return 'xs'
+    if (w < breakpoints.md) return 'sm'
+    if (w < breakpoints.lg) return 'md'
+    if (w < breakpoints.xl) return 'lg'
     return 'xl'
   })
 
-  const isMobile = computed(() => current.value === 'xs' || current.value === 'mobile')
-  const isTablet = computed(() => current.value === 'sm')
-  const isDesktop = computed(() => current.value === 'md' || current.value === 'lg' || current.value === 'xl')
+  const isMobile = computed(() => screenWidth.value < breakpoints.md) // < tablet
+  const isTablet = computed(() => screenWidth.value >= breakpoints.md && screenWidth.value < breakpoints.lg)
+  const isDesktop = computed(() => screenWidth.value >= breakpoints.lg)
+  const isLargeDesktop = computed(() => screenWidth.value >= breakpoints.xl)
 
   return {
-    width,
-    current,
+    screenWidth,
+    breakpoint,
     isMobile,
     isTablet,
     isDesktop,
+    isLargeDesktop,
+    isTouchable
   }
 }
