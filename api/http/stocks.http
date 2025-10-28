@@ -12,20 +12,26 @@ Accept: application/json
 Content-Type: application/json
 
 ### Tickers Recommendations
-GET {{url}}/tickers?page=1&sort=asc&q=&size=10
+# get the tickers paginated by page and size, q is the query by tickers of company name, sort is the sort order
+GET {{url}}/tickers?page=1&sort=asc&size=10&q=APPL
 Accept: application/json
 Content-Type: application/json
+Response:
+
 
 ### Ticker overview
-GET {{url}}/tickers/AAPL/overview
+# get company overview with historical prices from date specified
+GET {{url}}/tickers/AAPL/overview?from=2025-10-24
 Accept: application/json
 Content-Type: application/json
 
 ### Ticker predictions
+# get company predictions of the company
 GET {{url}}/tickers/AAPL/predictions
 Accept: application/json
 Content-Type: application/json
 
 ### Ticker logo
+# get company logo
 GET {{url}}/tickers/AAPL/logo
 Content-Type: application/json
