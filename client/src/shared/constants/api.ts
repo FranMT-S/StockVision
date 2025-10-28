@@ -1,43 +1,97 @@
 import { formatJustDate } from "../helpers/formats";
+import { buildQueryString, isValidQuery, normalizePageNumber, normalizePageSize } from "../helpers/query";
+import { ListParams } from "../interfaces/query";
 
-// windows.__ENV__ is used to get the environment variables in runtime in prod
+
+export const API_URL = window.__ENV__?.VITE_API_URL ||  import.meta.env.VITE_API_URL ||  'http://localhost:8080'
+
+// API Configuration
 export const API_CONFIG = {
-  BASE_URL: window.__ENV__?.VITE_API_URL || import.meta.env.VITE_API_URL || 'http://localhost:8080',
+  BASE_URL: API_URL,
   ENDPOINTS: {
-    List: function(q:string = '',page:number = 1,size: number = 10,sort: 'asc' | 'desc' = 'asc'){
-      if(!q || q == 'undefined') {
-        return `/api/v1/tickers?page=${page}&size=${size}&sort=${sort}`
+    /**
+     * Get paginated list of tickers
+     * @param params - List parameters including query, pagination and sorting
+     * @returns API endpoint URL
+     */
+    List: ({ q, page, size, sort = 'asc' }: ListParams = {}): string => {
+      const normalizedPage = normalizePageNumber(page);
+      const normalizedSize = normalizePageSize(size);
+      
+      const params: Record<string, string | number> = {
+        page: normalizedPage,
+        size: normalizedSize,
+        sort,
+      };
+
+      if (isValidQuery(q)) {
+        params.q = q!.trim();
       }
 
-      const qParam = q ? `&q=${q}` : ''
-      return `/api/v1/tickers?page=${page}&size=${size}&sort=${sort}${qParam}`
-    },
-    Overview: function(id: string,from:Date){
-      const date = formatJustDate(from)
-      return `/api/v1/tickers/${id}/overview?from=${date}`
-    },
-    Logo: function(id: string){
-      return `/api/v1/tickers/${id}/logo`
-    },
-    Predictions: function(id: string){
-      return `/api/v1/tickers/${id}/predictions`
+      return `${API_URL}/api/v1/tickers${buildQueryString(params)}`;
     },
 
-    /**Fetch historical prices from the API if from is not provided, fetch all historical prices */
-    HistoricalPrices: function(id: string,from?:Date){
-      let fromParam = ''
-      if(from){
-        const date = formatJustDate(from)
-        fromParam = `from=${date}`
+    /**
+     * Get ticker overview from a specific date
+     * @param id - Ticker ID
+     * @param from - Start date for overview
+     * @returns API endpoint URL
+     * @throws Error if Ticker ID is not provided
+     */
+    Overview: (id: string, from: Date): string => {
+      if (!id?.trim()) {
+        throw new Error('Ticker ID is required');
+      }
+
+      const date = formatJustDate(from);
+      return `${API_URL}/api/v1/tickers/${encodeURIComponent(id)}/overview?from=${date}`;
+    },
+
+    /**
+     * Get ticker logo URL
+     * @param id - Ticker ID
+     * @returns API endpoint URL
+     * @throws Error if Ticker ID is not provided
+     */
+    Logo: (id: string): string => {
+      if (!id?.trim()) {
+        throw new Error('Ticker ID is required');
+      }
+      return `${API_URL}/api/v1/tickers/${encodeURIComponent(id)}/logo`;
+    },
+
+    /**
+     * Get ticker predictions
+     * @param id - Ticker ID
+     * @returns API endpoint URL
+     * @throws Error if Ticker ID is not provided
+     */
+    Predictions: (id: string): string => {
+      if (!id?.trim()) {
+        throw new Error('Ticker ID is required');
+      }
+      return `${API_URL}/api/v1/tickers/${encodeURIComponent(id)}/predictions`;
+    },
+
+    /**
+     * Fetch historical prices from the API
+     * @param id - Ticker ID
+     * @param from - Optional start date. If not provided, fetches all historical prices
+     * @returns API endpoint URL
+     */
+    HistoricalPrices: (id: string, from?: Date): string => {
+      if (!id?.trim()) {
+        throw new Error('Ticker ID is required');
       }
       
-      return `/api/v1/tickers/${id}/historical?${fromParam}`
+      const basePath = `${API_URL}/api/v1/tickers/${encodeURIComponent(id)}/historical`;
+      
+      if (!from) {
+        return basePath;
+      }
+
+      const date = formatJustDate(from);
+      return `${basePath}?from=${date}`;
     },
   },
-};
-
-
-export const DEFAULT_PAGINATION = {
-  PAGE: 1,
-  LIMIT: 10,
-};
+} as const;

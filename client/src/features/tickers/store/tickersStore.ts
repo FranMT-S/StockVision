@@ -76,7 +76,13 @@ export const useTickersStore = defineStore('tickers', () => {
     tickerCancellationToken.value = new AbortController()
 
     error.value = null
-    const url = API_CONFIG.BASE_URL + API_CONFIG.ENDPOINTS.List(search.value,currentPage.value, itemsPerPage.value, sort.value)
+    const params = {
+      q: search.value,
+      page: currentPage.value,
+      size: itemsPerPage.value,
+      sort: sort.value
+    }
+    const url = API_CONFIG.ENDPOINTS.List(params)
     const response = await customFetch<TickerListResponse[]>(url,{signal: tickerCancellationToken.value.signal})
 
     if(response.ok){
@@ -104,7 +110,7 @@ export const useTickersStore = defineStore('tickers', () => {
     
     abortIfControllerIsActive(companyOverviewCancellationToken.value)
     companyOverviewCancellationToken.value = new AbortController()  
-    const url = API_CONFIG.BASE_URL + API_CONFIG.ENDPOINTS.Overview(ticker,from)
+    const url = API_CONFIG.ENDPOINTS.Overview(ticker,from)
     
     error.value = null
     const response = await customFetch<CompanyOverview>(url,{signal: companyOverviewCancellationToken.value.signal})
@@ -128,7 +134,7 @@ export const useTickersStore = defineStore('tickers', () => {
    */
   const fetchCompanyHistoricalPrices = async (ticker: string,from?:Date,abortController: AbortController | null = null) => {
     abortIfControllerIsActive(abortController)
-    const url = API_CONFIG.BASE_URL + API_CONFIG.ENDPOINTS.HistoricalPrices(ticker,from)
+    const url = API_CONFIG.ENDPOINTS.HistoricalPrices(ticker,from)
     
     error.value = null
     const response = await customFetch<HistoricalPrice[]>(url,{signal: abortController?.signal})
@@ -143,7 +149,7 @@ export const useTickersStore = defineStore('tickers', () => {
   const fetchCompanyPredictions = async (ticker: string) => {
     abortIfControllerIsActive(companyPredictionsCancellationToken.value)
     companyPredictionsCancellationToken.value = new AbortController()  
-    const url = API_CONFIG.BASE_URL + API_CONFIG.ENDPOINTS.Predictions(ticker)
+    const url = API_CONFIG.ENDPOINTS.Predictions(ticker)
     
     errorPredictions.value = null
     const response = await customFetch<HistoricalPrice[]>(url,{signal: companyPredictionsCancellationToken.value.signal})
