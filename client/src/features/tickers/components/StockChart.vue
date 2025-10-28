@@ -3,35 +3,47 @@
     <div v-if="isGeneratingScreenshot"  data-html2canvas-ignore="true" class="tw-z-50 tw-fixed tw-inset-0 tw-bg-black/30 tw-text-white tw-flex tw-items-center tw-justify-center">
       <p class="tw-text-[18px] tw-font-medium tw-text-blue">Generating Screenshot...</p>
     </div>
-    <!-- Controles superiores -->
+    
     <div class="chart-controls">
       <div class="controls-left">
-
-        <v-btn :color="chartType === ChartType['candlestick'] ? 'primary' : 'secondary'" variant="tonal" @click="toggleChartType(ChartType['candlestick'])" class=" py-2 px-4">
+        <v-btn 
+          :color="chartType === ChartType.candlestick ? 'primary' : 'secondary'" 
+          variant="tonal" 
+          @click="toggleChartType(ChartType.candlestick)" 
+          class=" py-2 px-4 tw-border tw-border-red"
+        >
           <v-icon icon="mdi-chart-waterfall" size="18" /> 
         </v-btn>
         
-        <v-btn :color="chartType === ChartType['area'] ? 'primary' : 'secondary'" variant="tonal" @click="toggleChartType(ChartType['area'])" class=" py-2 px-4">
+        <v-btn 
+          :color="chartType === ChartType.area ? 'primary' : 'secondary'" 
+          variant="tonal" 
+          @click="toggleChartType(ChartType.area)" 
+          class=" py-2 px-4">
           <v-icon icon="mdi-chart-line" size="18" /> 
         </v-btn>
 
-
-        <v-btn 
-          v-if="chartType === ChartType['candlestick']"
-          :color="isShowPredict ? 'primary' : 'secondary'" variant="tonal" @click="toggleShowPredict()" class=" py-2 px-4">
-          <v-icon icon="mdi-eye" size="18" /> 
-          <span v-if="!isShowPredict">{{isPredictLoading ? 'Loading...' : 'Get Vision'}}</span>
+        <v-btn      
+          v-if="chartType === ChartType.candlestick"
+          :color="isShowPredict ? 'primary' : 'secondary'" 
+          :class="{'animated-button':isPredictLoading}"
+          variant="tonal" @click="toggleShowPredict()"
+          class=" py-2 px-4 relative"
+        >
+          <v-icon class="d-flex  !tw-text-[18px]" icon="mdi-eye" size="17" /> 
+          <span v-if="!isShowPredict">{{true ? 'Visioning' : 'Get Vision'}}</span>
           <span v-else>Hide Vision</span>
+          <i v-if="isPredictLoading" class="loader --3"></i>
         </v-btn>
       </div>
       
       <div class="controls-right">
-        <div class="tw-flex tw-flex-row tw-items-center tw-gap-1 timeframe">
+        <section class="tw-flex tw-flex-row tw-items-center tw-gap-1 timeframe">
           <button 
           :class="{ 'tw-text-primary tw-bg-[#f5f5f5] tw-rounded': timeframe === option.value }"
           v-for="option in timeframeOptions" :key="option.value" @click="timeframe = option.value" class="tw-text-[#717171] tw-p-2 tw-py-1 tw-text-[12px] tw-font-medium tw-pa-0 tw-capitalize">{{ option.label }}</button>
-        </div>  
-        <button @click="takeScreenshot" class="btn py-2 px-4">
+        </section>  
+        <button @click="takeScreenshot" class="btn py-1 px-2">
           <v-icon icon="mdi-camera" size="18" /> 
         </button>
       </div>
@@ -40,9 +52,8 @@
     <!-- Chard container -->
     <div ref="chartContainer" class="chart-container"/>
 
- 
     <!-- crosshair tooltip -->
-    <FloatingTooltip :visible="selectedCrosshairData !== null && !isTouchDevice">
+    <FloatingTooltip :visible="selectedCrosshairData !== null">
       <div class="tw-bg-black/70 tw-rounded tw-p-2 tw-text-white">
         <CrossHairDetails :data="selectedCrosshairData!" />
       </div>  
@@ -78,6 +89,9 @@ import {
 } from 'lightweight-charts';
 import { computed, ComputedRef, onMounted, onUnmounted, ref, shallowReactive, watch } from 'vue';
 import CrossHairDetails from './CrossHairDetails.vue';
+import { useToast } from '@/shared/composables/useToast';
+import { Anchor } from 'vuetify/lib/types.mjs';
+import { useBreakpoints } from '@/shared/composables/useBreakpoints';
 
 interface Props {
   ticker: string;
@@ -137,6 +151,9 @@ const visibleRange = ref<{ from: Time; to: Time } | null>(null);
 const isShowPredict = ref<boolean>(false);
 const isGeneratingScreenshot = ref<boolean>(false);
 const selectedCrosshairData = ref<StockHLOC | null>(null);
+let chart: IChartApi | null = null;
+
+
 
 const timeframeOptions =ref([
     { value: Timeframe['1M'], label: '1M' },
@@ -144,7 +161,7 @@ const timeframeOptions =ref([
     { value: Timeframe['6M'], label: '6M' },
     { value: Timeframe['1Y'], label: '1Y' },
     { value: Timeframe['All'], label: 'All' }
-  ]);
+]);
 
 
 // styles of the elements in charts
@@ -183,8 +200,6 @@ const LinearAreaSeriesTheme: AreaSeriesPartialOptions = {
   topColor: '#2962FF', 
   bottomColor: 'rgba(41, 98, 255, 0.28)' 
 }
-
-let chart: IChartApi | null = null;
 
 const series = shallowReactive<Record<TSeriesType, ISeriesApi<any> | null>>({
   Candlestick: null,
@@ -293,6 +308,7 @@ const createCandleCharData = (data: StockHLOC[],color?:CandleChardColor) : CharD
 const initChart = () => {
   if (!chartContainer.value) return;
 
+  // main config of chart
   chart = createChart(chartContainer.value, {
     width: props.width,
     height: props.height,
@@ -345,25 +361,21 @@ const initChart = () => {
 };
 
 
-// hadnlers
+// handlers
 const handlerCossHairMove = (param: MouseEventParams) => {
-
     const index = param.logical;
     if(index === undefined || index < 0){
       selectedCrosshairData.value = null;
       return;
     } 
     
-    console.log(index)
-    console.log( chartData.value.stockHLOC[index])
     if(index <= props.historicalData.length){
       selectedCrosshairData.value = chartData.value.stockHLOC[index];
     }
 
     if(index > props.historicalData.length){
-      selectedCrosshairData.value = predictChartData.value.stockHLOC[index - props.historicalData.length + 1];
+      selectedCrosshairData.value = predictChartData.value.stockHLOC[index - props.historicalData.length];
     }
-    
   }
 
 // create the way to show the chart
@@ -765,6 +777,92 @@ onUnmounted(() => {
 .info-row:last-child {
   margin-bottom: 0;
 }
+
+.animated-button {
+  position: relative;
+  overflow: hidden;
+  font-weight: bold;
+  color: white!important;
+  border: none;
+  background-color: #1e90ff; /* azul base */
+  cursor: pointer;
+  z-index: 0;
+}
+
+/* Onda blanca amigable */
+.animated-button::before {
+  content: "";
+  position: absolute;
+  top: -250%;
+  left: -100%;
+  width: 300%;
+  height: 500%;
+  transform: translateX(-30%);
+  background: radial-gradient(circle,rgb(0, 152, 207) 0%, rgba(56, 129, 232, 1) 32%, rgb(56, 119, 255) 66%, rgb(119, 255, 158) 100%); 
+  animation: waveFriendly 2s ease-in-out infinite; 
+  z-index: -1;
+}
+
+@keyframes waveFriendly {
+  0% { transform: translateX(-10%); top:-250% }
+  50% { transform: translateX(10%); top:-90% }
+  100% { transform: translateX(-10%); top:-250% }
+}
+
+/**
+	loader --3
+**/
+.loader {
+	--color: white;
+	--size-dot: 0.5vmin;
+  --position-dot: 6px;
+	display: block;
+	position: relative;
+	width: 50%;
+	display: grid;
+	place-items: center;
+}
+
+.loader::before,
+.loader::after {
+	content: '';
+	box-sizing: border-box;
+	position: absolute;
+}
+
+
+.loader.--3::before,.loader.--3::after{
+	width: var(--size-dot);
+	height: var(--size-dot);
+	background-color: var(--color);
+	border-radius: 50%;
+	animation: loader-3 2.1s   ease-in-out infinite;
+}
+
+.loader.--3::before {
+	right: calc(100%  - var(--size-dot) - var(--position-dot)  );
+  
+}
+
+.loader.--3::after {
+	right: calc(100%  - var(--size-dot) - var(--position-dot) + 4px );
+	animation-delay: 1.5s;
+}
+
+@keyframes loader-3 {
+  0%, 100% {
+		transform: translateY(0.0vmin);
+	}
+	
+	44% {
+		transform: translateY(0.3vmin);
+	}
+}
+
+
+
+
+
 
 
 </style>

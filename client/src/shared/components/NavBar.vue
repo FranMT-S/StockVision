@@ -13,7 +13,7 @@
         >
           <v-btn
             variant="text"
-            class="text-h6 font-weight-bold"
+            class="text-h6 font-weight-bold !tw-hidden sm:!tw-block"
             color="white"
             @click="$router.push('/')"
           >
@@ -24,8 +24,8 @@
           </v-btn>
         </v-col>
         
-        <!-- Search Bar -->
-        <v-col cols="12" sm="8" md="6" lg="4" class="ml-4 ">
+        <!-- Search Bar  cols="9" sm="4" md="6" lg="4"-->
+        <v-col  :cols="screenWidth < 480 ? 11 : 6" >
           <v-text-field
           v-model="searchQuery"
           placeholder="Search by id or ticker..."
@@ -33,7 +33,7 @@
           density="compact"
           hide-details
           clearable
-          class="search-field"
+          class="search-field  ml-4 "
           bg-color="white"
           color="primary"
           @keyup.enter="handleSearch"
@@ -62,21 +62,21 @@
       </v-row>
     </v-container>
   </v-app-bar>
-  </template>
+ </template>
   
-
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useRoute } from 'vuetify/lib/composables/router.mjs'
 import { RouterNames } from '@/router/names'
-
+import { useBreakpoints } from '../composables/useBreakpoints'
 
 const router = useRouter()
 const route = useRoute()
 const searchQuery = ref(route.value?.query?.q?.toString() || '')
 const searchLoading = ref(false)
+const {screenWidth} = useBreakpoints();
 
 watch(() => route.value?.query?.q, (newQuery) => {
   searchQuery.value = newQuery?.toString() || ''
@@ -92,7 +92,7 @@ const handleSearch =  () => {
     router.push({
       name: RouterNames.Tickers,
       query: {
-        q: searchQuery.value
+        q: searchQuery.value,
       }
     })
 

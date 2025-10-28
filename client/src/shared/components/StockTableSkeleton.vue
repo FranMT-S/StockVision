@@ -1,11 +1,13 @@
 <template>
-  <v-table class="recommendations-table">
+  <v-table class="recommendations-table" density="comfortable">
     <thead>
       <tr>
         <th class="text-left font-weight-bold text-grey-darken-2">Stock</th>
         <th class="text-left font-weight-bold text-grey-darken-2">Price</th>
         <th class="text-left font-weight-bold text-grey-darken-2">Change</th>
         <th class="text-left font-weight-bold text-grey-darken-2">Sentiment</th>
+        <th class="text-left font-weight-bold text-grey-darken-2">Advice</th>
+        <th class="text-left font-weight-bold text-grey-darken-2">Last Rating Date</th>
       </tr>
     </thead>
     <tbody>
@@ -62,6 +64,22 @@
             type="avatar"
               width="40"
             class="mx-auto"
+          />
+        </td>
+
+        <!-- Advice Column Skeleton -->
+        <td class="text-left ">
+          <v-skeleton-loader
+            type="text"
+              width="120"     
+          />
+        </td>
+
+        <!-- Last Rating Date Column Skeleton -->
+        <td class="text-left ">
+          <v-skeleton-loader
+            type="text"
+              width="120"    
           />
         </td>
       </tr>

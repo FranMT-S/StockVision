@@ -100,12 +100,16 @@ import { useTickersStore } from '../store/tickersStore'
 import { storeToRefs } from 'pinia'
 import { Timeframe } from '@/shared/enums/timeFrame'
 import { useBreakpoints } from '@/shared/composables/useBreakpoints';
+import { useToast } from '@/shared/composables/useToast'
+import { Anchor } from 'vuetify/lib/types.mjs'
+import { useDebounce } from '@/shared/composables/useDebounce'
 
 
 const route = useRoute()
 const {fetchCompanyOverView, fetchCompanyHistoricalPrices, fetchCompanyPredictions} = useTickersStore()
 const {companyOverview, error, companyHistoricalPrices,companyPredictions,errorPredictions} = storeToRefs(useTickersStore())
 const {isMobile,isTablet,isTouchable,isDesktop,isLargeDesktop,screenWidth} = useBreakpoints()
+const { open, state} = useToast();
 
 // State
 const loading = ref(true)
@@ -142,14 +146,11 @@ const columns = computed<{
     }
   }
 
- 
   return {
     side: 3,
     main: 6,
     new: 3
   }
-  
-
 }) 
 
 // fetch company overview fill the data in the store
@@ -158,6 +159,7 @@ const fetchTickerData = async () => {
   error.value = null
   const from = new Date()
   from.setDate(from.getDate() - interval.value)
+
   await fetchCompanyOverView(tickerId.value,from)
   
   if(error.value){
@@ -181,9 +183,17 @@ const fetchTickerData = async () => {
 }
 
 const fetchPredictions = async () => {
-  isPredictLoading.value = true
+  const {debounced, cancel} = useDebounce()
+
+  debounced(() => {
+    isPredictLoading.value = true
+  }, 200)
+
   await fetchCompanyPredictions(tickerId.value)
+  
+  cancel()
   isPredictLoading.value = false
+  
 }
 
 watch(interval, async () => {
@@ -206,6 +216,22 @@ watch(companyHistoricalPrices, () => {
     historicalPrices: companyHistoricalPrices.value
   }
 })
+
+// show error predict
+watch(errorPredictions, () => {
+  const location:Anchor = isMobile.value ? "top center" : "top right";
+  if(errorPredictions.value){
+    open(errorPredictions.value, "red-darken-4", location);
+  }
+})
+
+watch(() =>state.show, () => {
+  if(!state.show){
+    errorPredictions.value = null;
+  }
+})
+
+
 
 // Lifecycle
 onMounted(async () => {

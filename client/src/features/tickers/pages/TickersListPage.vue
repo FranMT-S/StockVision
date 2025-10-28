@@ -21,7 +21,7 @@
       <v-card elevation="2" class="rounded-lg">
         <v-card-text class="pa-0">
           <!-- Loading State -->
-          <StockTableSkeleton v-if="loading" :rows="10" />
+          <StockTableSkeleton style="max-height: calc(100vh - 200px)" v-if="loading" :rows="6" />
           
           <!-- Error State -->
           <ErrorFetchData v-else-if="error" :error="error" class="pa-8 text-center" @click="tickersStore.fetchTickers()"/> 
@@ -82,20 +82,27 @@ const tickersStore = useTickersStore()
 const {tickers, totalPages, totalItems,loading,error,currentPage,itemsPerPage,search} = storeToRefs(tickersStore)
 
 onMounted(() => {
-  search.value = route.query.q?.toString() || ''
-  if(!search.value){
     tickersStore.fetchTickers()
-  }
 })
 
 watch(
   () => route.query,
   (newQuery) => {
-    tickersStore.currentPage = Number(newQuery.page) || 1;
+    tickersStore.currentPage = Number.isNaN(Number(newQuery.page)) ? 1 : Number(newQuery.page);
     tickersStore.search = String(newQuery.q) || '';
   },
   { deep: true }
 );
+
+watch(currentPage, () => {
+  router.push({
+    name: RouterNames.Tickers,
+    query: {
+      q: search.value == 'undefined' || !search.value ? undefined : search.value,
+      page: currentPage.value == 1 ? undefined : currentPage.value,
+    }
+  })
+})
 
 const tableRows: ComputedRef<TickerRow[]> = computed(() => {
   let rows: TickerRow[] = []

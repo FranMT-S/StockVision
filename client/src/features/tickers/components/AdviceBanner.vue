@@ -32,8 +32,8 @@ const props = defineProps<props>();
 
 const advice = computed(() => {
   let [initialAction, description] = props.advice.split('.');
-  initialAction = initialAction.trim();
-  description = description.trim();
+  initialAction = initialAction ? initialAction.trim() : '';
+  description = description ? description.trim() : '';
 
   const { action,icon, color } = useAdvice(initialAction)
 

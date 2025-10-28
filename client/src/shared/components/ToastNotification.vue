@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Anchor } from 'vuetify/lib/types.mjs';
 import { useToast } from '../composables/useToast'
 const { state, close } = useToast()
 
@@ -9,8 +10,8 @@ const { state, close } = useToast()
     v-model="state.show"
     :color="state.color"
     :timeout="state.timeout"
-    location="top right"
-
+    :show="true"
+    :location="state.location"
   >
     {{ state.message }}
     <template #actions>
