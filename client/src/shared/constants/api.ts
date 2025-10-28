@@ -1,5 +1,6 @@
 import { formatJustDate } from "../helpers/formats";
 import { buildQueryString, isValidQuery, normalizePageNumber, normalizePageSize } from "../helpers/query";
+import { sanitizeSQL } from "../helpers/sanatizer";
 import { ListParams } from "../interfaces/query";
 
 
@@ -25,7 +26,7 @@ export const API_CONFIG = {
       };
 
       if (isValidQuery(q)) {
-        params.q = q!.trim();
+        params.q = sanitizeSQL(q!.trim());
       }
 
       return `${API_URL}/api/v1/tickers${buildQueryString(params)}`;
