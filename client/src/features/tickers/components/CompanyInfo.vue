@@ -7,9 +7,9 @@
       <section class="tw-flex tw-flex-row tw-items-start md:tw-items-center tw-w-full">
         <div class="md:text-h6  font-weight-medium  dark:tw-text-[#ffffff] tw-w-full">
           <section class=" ">
-            <div class="tw-flex tw-flex-row tw-items-center tw-gap-2">
+            <div class="tw-flex tw-flex-row tw-items-center tw-gap-2 lg:tw-max-w-[70%] lg:tw-items-baseline">
               {{ companyData.companyName }}
-              <span class="tw-text-[#717171] tw-text-[12px]  dark:tw-text-[#ffffff]">{{ companyData.symbol }}</span>
+              <span class="tw-text-[#717171] lg:tw-contents tw-text-[12px]  dark:tw-text-[#ffffff]">{{ companyData.symbol }}</span>
             </div>
           <section id="company-price" class="tw-flex tw-flex-row tw-items-center tw-gap-1">
               <div 

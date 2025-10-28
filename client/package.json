@@ -7,7 +7,11 @@
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
     "preview": "vite preview",
-    "type-check": "vue-tsc --noEmit"
+    "type-check": "vue-tsc --noEmit",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:run": "vitest run",
+    "coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@fontsource/roboto": "^5.2.7",
@@ -22,14 +26,19 @@
   "devDependencies": {
     "@types/node": "^24.5.0",
     "@vitejs/plugin-vue": "^6.0.1",
+    "@vitest/coverage-v8": "^4.0.4",
+    "@vitest/ui": "^4.0.4",
+    "@vue/test-utils": "^2.4.6",
     "@vue/tsconfig": "^0.7.0",
     "autoprefixer": "^10.4.21",
+    "jsdom": "^27.0.1",
     "postcss": "^8.5.6",
     "tailwindcss": "3",
     "typescript": "~5.8.3",
     "vite": "^7.1.2",
     "vite-plugin-vue-devtools": "^8.0.2",
     "vite-plugin-vuetify": "^2.1.2",
+    "vitest": "^4.0.4",
     "vue-tsc": "^3.0.5",
     "vuetify": "^3.10.0"
   }
