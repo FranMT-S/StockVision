@@ -7,6 +7,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
+    setupFiles: ['./test/setup.ts'],
   },
   resolve: {
     alias: {
@@ -16,8 +17,5 @@ export default defineConfig({
       '@models': fileURLToPath(new URL('./src/shared/models', import.meta.url)),
       '@shared': fileURLToPath(new URL('./src/shared', import.meta.url)),
     },
-  },
-  test: {
-    setupFiles: ['./test/setup.ts'],
-  },
+  }
 })

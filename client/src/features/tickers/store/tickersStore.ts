@@ -1,11 +1,11 @@
 import { defineStore } from 'pinia'
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeMount } from 'vue'
 import type { CompanyOverview, HistoricalPrice, TickerListResponse } from '@/shared/models/recomendations'
 import { customFetch } from '@/shared/services/customFetch'
 import { API_CONFIG } from '@/shared/constants/api'
 import { ErrorType } from '@/shared/models/response'
-import { debounce } from 'vuetify/lib/util/helpers.mjs'
 import { useDebounce } from '@/shared/composables/useDebounce'
+import { useRoute } from 'vue-router'
 
 interface StockData {
   ticker: string
@@ -19,6 +19,11 @@ interface StockData {
 }
 
 export const useTickersStore = defineStore('tickers', () => {
+  const route = useRoute();
+  
+  const initialPage = Number.isNaN(Number(route.query.page)) ? 1 : Number(route.query.page)
+  const initialQuery = route.query.q == undefined || !route.query.q ? '' : route.query.q?.toString()
+
   // State
   const stockData = ref<StockData[]>([])
   const loading = ref(true)
@@ -31,11 +36,11 @@ export const useTickersStore = defineStore('tickers', () => {
   const companyHistoricalPrices = ref<HistoricalPrice[]>([])
 
   // Pagination state
-  const currentPage = ref(1)
+  const currentPage = ref(initialPage)
   const itemsPerPage = ref(10)
   const totalItems = ref(0)
   const sort = ref<'asc' | 'desc'>('asc')
-  const search = ref('')
+  const search = ref(initialQuery)
   const tickerCancellationToken = ref<AbortController | null>(null)
   const companyOverviewCancellationToken = ref<AbortController | null>(null)
   const companyPredictionsCancellationToken = ref<AbortController | null>(null)
@@ -64,7 +69,6 @@ export const useTickersStore = defineStore('tickers', () => {
 
 
   const fetchTickers = async () => {
-    let showLoader = true; 
     const {debounced, cancel} = useDebounce()
     
     // avoid flickering if the request is too fast
@@ -93,19 +97,15 @@ export const useTickersStore = defineStore('tickers', () => {
     }
     
     cancel()
-    if(showLoader){
-      loading.value = false
-    }
+    loading.value = false
   }
 
   const fetchCompanyOverView = async (ticker: string,from:Date) => {
-    let showLoader = true; 
     const {debounced, cancel} = useDebounce()
     
     // avoid flickering if the request is too fast
     debounced(() => {
       loading.value = true
-      showLoader = true
     }, 200)
     
     abortIfControllerIsActive(companyOverviewCancellationToken.value)
@@ -122,9 +122,7 @@ export const useTickersStore = defineStore('tickers', () => {
     }
     
     cancel()
-    if(showLoader){
-      loading.value = false
-    }
+    loading.value = false
   }
 
   /**
@@ -146,21 +144,36 @@ export const useTickersStore = defineStore('tickers', () => {
     }
   }
 
+  /**
+   * fetch company predictions and update the state of companyPredictions and errorPredictions
+   * abort the request if it is already active
+   * this function not use loading state
+   */
   const fetchCompanyPredictions = async (ticker: string) => {
     abortIfControllerIsActive(companyPredictionsCancellationToken.value)
     companyPredictionsCancellationToken.value = new AbortController()  
     const url = API_CONFIG.ENDPOINTS.Predictions(ticker)
     
+    const errrosList = [
+      "Vision tried to see the future, but the lens fogged up. Try again soon",
+      "Vision can’t see right now — try again later",
+      "Oops… Vision lost its glasses. Try again later"
+    ]
+
     errorPredictions.value = null
     const response = await customFetch<HistoricalPrice[]>(url,{signal: companyPredictionsCancellationToken.value.signal})
-
     if(response.ok){
       companyPredictions.value = response.data
     }else{
-      errorPredictions.value = response.errorType !== ErrorType.ABORT_ERROR ? response.error : "" 
+      errorPredictions.value = errrosList[Math.floor(Math.random() * errrosList.length)] 
+      console.error(response.error)
     }  
-
   }
+
+  onBeforeMount(() => {
+    search.value =  route.query.q?.toString() || ''
+    currentPage.value = Number.isNaN(Number(route.query.page)) ? 1 : Number(route.query.page)
+  })
 
   return {
     // State
