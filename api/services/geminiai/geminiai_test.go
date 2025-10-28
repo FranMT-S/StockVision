@@ -4,12 +4,14 @@ import (
 	"api/models"
 	"api/services/geminiai"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/joho/godotenv"
+	"github.com/stretchr/testify/assert"
 )
 
-func TestGenerateAdviceAndStocks(t *testing.T) {
+func TestGenerateAdvice(t *testing.T) {
 	_ = godotenv.Load("../../.env")
 
 	advice, err := geminiai.GenerateAdvice("AAPL", getTestHistoricStock(), 20, nil)
@@ -17,7 +19,14 @@ func TestGenerateAdviceAndStocks(t *testing.T) {
 		t.Error(err)
 	}
 
-	fmt.Println("Advice", advice)
+	parts := strings.SplitN(advice, ".", 2)
+
+	assert.Equal(t, 2, len(parts), "Advice should have 2 parts")
+	assert.NotEmpty(t, parts[0], "Behavior should not be empty")
+	assert.NotEmpty(t, parts[1], "Justification should not be empty")
+	assert.Contains(t, []string{"BUY", "SELL", "HOLD"}, parts[0], "Behavior should be BUY, SELL or HOLD")
+
+	fmt.Println("Advice:", advice)
 }
 
 func TestGeneratePredict(t *testing.T) {
