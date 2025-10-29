@@ -82,6 +82,10 @@ const tickersStore = useTickersStore()
 const {tickers, totalPages, totalItems,loading,error,currentPage,itemsPerPage,search} = storeToRefs(tickersStore)
 
 onMounted(() => {
+  currentPage.value = Number.isNaN(Number(route.query.page)) ? 1 : Number(route.query.page);
+  search.value = String(route.query.q ?? '');
+
+  if(tickers.value.length === 0)
     tickersStore.fetchTickers()
 })
 

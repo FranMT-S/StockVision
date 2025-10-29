@@ -1,45 +1,48 @@
 <template>
   <div>
     <div class="tw-flex tw-flex-col tw-gap-1">
-      <div class="tw-flex tw-flex-row tw-gap-2 tw-items-center">
-        <span class="tw-text-[13px] tw-font-medium ">V:</span>
-        <span class="tw-text-[12px] tw-font-medium">{{  humanizeNumberFormat(props.data.volume)}}</span>
+      <v-icon :icon="icon" size="14" :class="textColorByTending" />
+      <div v-for="field in fields" :key="field.label" class="tw-flex tw-flex-row tw-gap-2 tw-items-center">
+        <span  class="tw-text-[13px] tw-font-medium ">{{ field.label }}</span>
+        <span :class="field.extraClass" class="tw-text-[11.5px] tw-font-semibold ">{{ field.value }}</span>
       </div>
-      <div  class="tw-flex tw-flex-row tw-gap-2 tw-items-center">
-        <span class="tw-text-[13px] tw-font-medium ">O:</span>
-        <span class="tw-text-[12px] tw-font-medium">{{ humanizeNumberFormat(props.data.open) }}$</span>
-      </div>
-      <div class="tw-flex tw-flex-row tw-gap-2 tw-items-center">
-        <span class="tw-text-[13px] tw-font-medium ">C:</span>
-        <span class="tw-text-[12px] tw-font-medium">{{ humanizeNumberFormat(props.data.close) }}$</span>
-     </div>
-      <div  class="tw-flex tw-flex-row tw-gap-2 tw-items-center">
-        <span class="tw-text-[13px] tw-font-medium ">H:</span>
-        <span class="tw-text-[12px] tw-font-medium">{{ humanizeNumberFormat(props.data.high) }}$</span>
-      </div>
-      <div  class="tw-flex tw-flex-row tw-gap-2 tw-items-center">
-        <span class="tw-text-[13px] tw-font-medium ">L:</span>
-        <span class="tw-text-[12px] tw-font-medium">{{ humanizeNumberFormat(props.data.low) }}$</span>
-      </div>  
-      <div  class="tw-flex tw-flex-row tw-gap-2 tw-items-center">
-        <span class="tw-text-[13px] tw-font-medium ">CH:</span>
-        <span class="tw-text-[12px] tw-font-medium">{{ humanizeNumberFormat(props.data.change) }}</span>
-      </div>  
-      <div  class="tw-flex tw-flex-row tw-gap-2 tw-items-center">
-        <span class="tw-text-[13px] tw-font-medium ">%CH:</span>
-        <span class="tw-text-[12px] tw-font-medium">{{ humanizeNumberFormat(props.data.changePercent) }}</span>
-      </div>  
+      
     </div> 
   </div>
 </template>
   
 <script setup lang="ts">
-import { humanizeNumberFormat } from '@/shared/helpers/formats';
-import { StockHLOC } from '@/shared/models/recomendations';
-
 interface Props {
   data: StockHLOC
 }
 
+import { humanizeNumberFormat } from '@/shared/helpers/formats';
+import { StockHLOC } from '@/shared/models/recomendations';
+import { computed } from 'vue';
+
 const props = defineProps<Props>()
+
+const icon = computed(() => {
+  return props.data.change > 0 ? 'mdi-trending-up' : 'mdi-trending-down';
+})
+
+const textColorByTending = computed(() => {
+  return props.data.change > 0 ? 'tw-text-green-400' : 'tw-text-red-400';
+})
+
+const textColorDefault = 'tw-text-gray-200'
+
+const fields = computed(() => {
+  
+  return [
+    { label: 'V:',value: humanizeNumberFormat(props.data.volume), extraClass: textColorDefault },
+    { label: 'O:',value: `${humanizeNumberFormat(props.data.open)}$`, extraClass: textColorDefault},
+    { label: 'C:',value: `${humanizeNumberFormat(props.data.close)}$`, extraClass: textColorDefault},
+    { label: 'H:',value: `${humanizeNumberFormat(props.data.high)}$`, extraClass:textColorDefault },
+    { label: 'L:',value: `${humanizeNumberFormat(props.data.low)}$`, extraClass: textColorDefault},
+    { label: 'CH:',value: humanizeNumberFormat(props.data.change), extraClass:textColorByTending.value },
+    { label: '%CH:',value: `${humanizeNumberFormat(props.data.changePercent)}%`, extraClass:textColorByTending.value },
+  ]
+})
+
 </script>

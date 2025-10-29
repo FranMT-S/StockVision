@@ -49,7 +49,7 @@
             <StockChart           
               :historical-data="tickerData.historicalPrices"
               :ticker="tickerId"
-              class="mb-6 lg:tw-mx-0 tw-mx-3"
+              class="mb-6 lg:tw-mx-0 tw-px-3"
               @update:timeframe="interval = $event"
               @update:predict="fetchPredictions()"
               :predictNextWeek="companyPredictions"

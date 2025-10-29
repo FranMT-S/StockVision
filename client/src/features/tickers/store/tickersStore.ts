@@ -20,6 +20,7 @@ interface StockData {
 
 export const useTickersStore = defineStore('tickers', () => {
   const route = useRoute();
+  const {debounced, cancel:cancelDebounceFetchTickers} = useDebounce()
   
   const initialPage = Number.isNaN(Number(route.query.page)) ? 1 : Number(route.query.page)
   const initialQuery = route.query.q == undefined || !route.query.q ? '' : route.query.q?.toString()
@@ -34,6 +35,7 @@ export const useTickersStore = defineStore('tickers', () => {
   const companyOverview = ref<CompanyOverview | null>(null)
   const companyPredictions = ref<HistoricalPrice[]>([])
   const companyHistoricalPrices = ref<HistoricalPrice[]>([])
+
 
   // Pagination state
   const currentPage = ref(initialPage)
@@ -51,9 +53,13 @@ export const useTickersStore = defineStore('tickers', () => {
       controller.abort()
     }
   }
+  
 
   watch([currentPage, sort, search], () => {
-    fetchTickers()
+    cancelDebounceFetchTickers()
+    debounced(() => {
+      fetchTickers()
+    }, 100)
   })
 
   watch(search, (newSearch) => {

@@ -34,6 +34,7 @@
                 :color="getActionColor(recommendation?.action || '')"
                 size="small"
                 variant="flat"
+                class="tw-capitalize"
               >
                 {{ recommendation?.action }}
               </v-chip>
@@ -41,21 +42,30 @@
             
             <td class="pa-3">
               <div class="d-flex align-center">
-                <span 
-                  class="text-body-2 font-weight-medium mr-2"
-                  :class="getRatingColor(recommendation?.rating_from || '')"
-                >
-                  {{ recommendation?.rating_from }}
-                </span>
-                <v-icon size="small" color="grey-darken-1">
-                  mdi-arrow-right
-                </v-icon>
-                <span 
-                  class="text-body-2 font-weight-medium ml-2"
-                  :class="getRatingColor(recommendation?.rating_to || '')"
-                >
-                  {{ recommendation?.rating_to }}
-                </span>
+                <template v-if="recommendation?.rating_from && recommendation?.rating_to">
+                  <span 
+                    class="text-body-2 font-weight-medium mr-2"
+                    :class="getRatingColor(recommendation?.rating_from || '')"
+                  >
+                    {{ recommendation?.rating_from }}
+                  </span>
+                  <v-icon size="small" color="grey-darken-1">
+                    mdi-arrow-right
+                  </v-icon>
+                  <span 
+                    class="text-body-2 font-weight-medium ml-2"
+                    :class="getRatingColor(recommendation?.rating_to || '')"
+                  >
+                    {{ recommendation?.rating_to }}
+                  </span>
+                </template>
+                <template v-else>
+                  <span 
+                    class="text-body-2 font-weight-medium"
+                  >
+                    Not rating
+                  </span>
+                </template>
               </div>
             </td>
             

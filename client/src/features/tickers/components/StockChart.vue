@@ -6,22 +6,32 @@
     
     <div class="chart-controls">
       <div class="controls-left">
-        <v-btn 
-          :color="chartType === ChartType.candlestick ? 'primary' : 'secondary'" 
-          variant="tonal" 
-          @click="toggleChartType(ChartType.candlestick)" 
-          class=" py-2 px-4 tw-border tw-border-red"
-        >
-          <v-icon icon="mdi-chart-waterfall" size="18" /> 
-        </v-btn>
+        <v-tooltip text="Candlestick Chart" location="top" open-delay="500">  
+          <template #activator="{ props }">
+            <v-btn 
+              v-bind="props"
+              :color="chartType === ChartType.candlestick ? 'primary' : 'secondary'" 
+              variant="tonal" 
+              @click="toggleChartType(ChartType.candlestick)" 
+              class=" py-2 px-4 tw-border tw-border-red"
+            >
+                  <v-icon  icon="mdi-chart-waterfall" size="18" />
+            </v-btn>  
+          </template>
+        </v-tooltip>
         
-        <v-btn 
-          :color="chartType === ChartType.area ? 'primary' : 'secondary'" 
-          variant="tonal" 
-          @click="toggleChartType(ChartType.area)" 
-          class=" py-2 px-4">
-          <v-icon icon="mdi-chart-line" size="18" /> 
-        </v-btn>
+        <v-tooltip text="Closing Price Chart" location="top" open-delay="500">  
+          <template #activator="{ props }">
+            <v-btn 
+              v-bind="props"
+              :color="chartType === ChartType.area ? 'primary' : 'secondary'" 
+              variant="tonal" 
+              @click="toggleChartType(ChartType.area)" 
+              class=" py-2 px-4">
+                <v-icon icon="mdi-chart-line" size="18" /> 
+            </v-btn>
+          </template>
+        </v-tooltip>
 
         <v-btn      
           v-if="chartType === ChartType.candlestick"
@@ -30,9 +40,10 @@
           variant="tonal" @click="toggleShowPredict()"
           class=" py-2 px-4 relative"
         >
-          <v-icon class="d-flex  !tw-text-[18px]" icon="mdi-eye" size="17" /> 
-          <span v-if="!isShowPredict">{{true ? 'Visioning' : 'Get Vision'}}</span>
-          <span v-else>Hide Vision</span>
+          <v-icon class="d-flex  !tw-text-[18px]" icon="mdi-creation" size="17" /> 
+          <span v-if="!isShowPredict && predictNextWeek.length > 0">Show Predict</span>
+          <span v-else-if="!isShowPredict ">{{ predictNextWeek.length === 0  ? 'Get Ia Predict' : 'Predicting'}}</span>
+          <span v-if="isShowPredict ">Hide Predict</span>
           <i v-if="isPredictLoading" class="loader --3"></i>
         </v-btn>
       </div>
@@ -40,8 +51,12 @@
       <div class="controls-right">
         <section class="tw-flex tw-flex-row tw-items-center tw-gap-1 timeframe">
           <button 
-          :class="{ 'tw-text-primary tw-bg-[#f5f5f5] tw-rounded': timeframe === option.value }"
-          v-for="option in timeframeOptions" :key="option.value" @click="timeframe = option.value" class="tw-text-[#717171] tw-p-2 tw-py-1 tw-text-[12px] tw-font-medium tw-pa-0 tw-capitalize">{{ option.label }}</button>
+            v-for="option in timeframeOptions" :key="option.value" @click="timeframe = option.value" 
+            :class="{ 'tw-text-primary tw-bg-gray-200/80 tw-rounded': timeframe === option.value }"
+            class="tw-text-[#717171] tw-p-2 tw-py-1 tw-text-[12px] tw-font-medium tw-pa-0 tw-capitalize"
+          >
+            {{ option.label }}
+          </button>
         </section>  
         <button @click="takeScreenshot" class="btn py-1 px-2">
           <v-icon icon="mdi-camera" size="18" /> 
@@ -152,8 +167,6 @@ const isShowPredict = ref<boolean>(false);
 const isGeneratingScreenshot = ref<boolean>(false);
 const selectedCrosshairData = ref<StockHLOC | null>(null);
 let chart: IChartApi | null = null;
-
-
 
 const timeframeOptions =ref([
     { value: Timeframe['1M'], label: '1M' },
@@ -328,10 +341,10 @@ const initChart = () => {
           style: LineStyle.Solid,
           labelBackgroundColor: '#9B7DFF',
       },
-
       horzLine: {
-          color: '#9B7DFF',
-          labelBackgroundColor: '#9B7DFF',
+        color: '#9B7DFF',
+        labelBackgroundColor: '#9B7DFF',
+        
       },
     },
     timeScale: {
@@ -339,8 +352,7 @@ const initChart = () => {
       timeVisible: true,
       secondsVisible: false,
       fixRightEdge: true,
-      fixLeftEdge: true,
-      
+      fixLeftEdge: true,      
     },
     rightPriceScale: {
       visible: true,
@@ -369,11 +381,11 @@ const handlerCossHairMove = (param: MouseEventParams) => {
       return;
     } 
     
-    if(index <= props.historicalData.length){
+    if(index < props.historicalData.length){
       selectedCrosshairData.value = chartData.value.stockHLOC[index];
     }
 
-    if(index > props.historicalData.length){
+    if(index >= props.historicalData.length){
       selectedCrosshairData.value = predictChartData.value.stockHLOC[index - props.historicalData.length];
     }
   }
@@ -490,7 +502,7 @@ const updateScales = () => {
     visible: false,
     scaleMargins: {
       top: 0.8,
-      bottom: 0,
+      bottom: 0.0,
     },
   }
 
@@ -504,8 +516,8 @@ const updateScales = () => {
 
   if (!existVolumeScale) {
     mainSerieScale.scaleMargins = {
-      top: 0,
-      bottom: 0,
+      top: 0.0,
+      bottom: 0.0,
     }
   }
 
