@@ -28,7 +28,7 @@
         <v-col  :cols="screenWidth < 480 ? 11 : 6" >
           <v-text-field
           v-model="searchQuery"
-          placeholder="Search by id or ticker..."
+          placeholder="Search by ticker or company..."
           variant="outlined"
           density="compact"
           hide-details
