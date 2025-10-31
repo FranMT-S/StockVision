@@ -23,71 +23,66 @@
       <div v-else-if="tickerData" class="ticker-content">
         <v-row class="mb-0 tw-relative tw-justify-end tw-px-[4px] lg:tw-pt-[15px] lg:tw-px-[20px] xl:tw-pe-0 ">
           <v-col :cols="columns.side"
-           class="tw-bg-[#ffffff] lg:tw-shadow-sm  md:tw-p-4 tw-border-l-2 tw-rounded-lg dark:tw-bg-[#1e1e1e] dark:tw-text-white lg:tw-sticky md:tw-top-[84px] !tw-px-0 !tw-pt-4 lg:!tw-px-[5px] lg:tw-flex lg:tw-flex-col lg:tw-gap-4"
-            :class="{ 'tw-h-[calc(100vh_-_100px)]': isLargeDesktop }"
-          >
-            <!-- Company Information -->
-            <CompanyInfo 
-              :company-data="tickerData.companyData"
-            />
+            class="tw-bg-[#ffffff] lg:tw-shadow-sm  md:tw-p-4 tw-border-l-2 tw-rounded-lg dark:tw-bg-[#1e1e1e] dark:tw-text-white lg:tw-sticky md:tw-top-[84px] !tw-px-0 !tw-pt-4 lg:!tw-px-[5px] lg:tw-flex lg:tw-flex-col lg:tw-gap-4"
+            :class="{ 'tw-h-[calc(100vh_-_100px)]': isDesktop }">
+            <div id="company-info-col">
 
-            <!-- Company Metrics -->
-            <CompanyMetrics 
-              :company-data="tickerData.companyData"
-              class="md:mb-6 lg:tw-mx-0 tw-mx-3 lg:tw-mb-6"
-            />  
+              <!-- Company Information -->
+              <CompanyInfo id="company-info" :company-data="tickerData.companyData" />
 
-            <AdviceBanner 
-              v-if="isDesktop"
-              
-              :advice="tickerData.advice"
-              tittle="Friendly Advice"
-            />
+              <!-- Company Metrics -->
+              <CompanyMetrics id="company-metrics" :company-data="tickerData.companyData"
+                class="md:mb-6 lg:tw-mx-0 tw-mx-3 lg:tw-mb-6" />
+
+              <AdviceBanner v-if="isDesktop" :advice="tickerData.advice" tittle="Friendly Advice" />
+            </div>
+
           </v-col>
           <v-col :cols="columns.main">
             <!-- Stock Chart -->
-            <StockChart           
-              :historical-data="tickerData.historicalPrices"
+            <StockChart 
+              :historical-data="tickerData.historicalPrices" 
               :ticker="tickerId"
-              class="mb-6 lg:tw-mx-0 tw-px-3"
-              @update:timeframe="interval = $event"
+              class="mb-6 lg:tw-mx-0 tw-px-3" 
+              @update:timeframe="interval = $event" 
               @update:predict="fetchPredictions()"
-              :predictNextWeek="companyPredictions"
+              :predictNextWeek="companyPredictions" 
               :predictError="errorPredictions"
-              :isPredictLoading="isPredictLoading"
-              :isTouchDevice="isTouchable || isTablet"
+              :isPredictLoading="isPredictLoading" 
+              :isTouchDevice="isTouchable || isTablet" 
+              :chartType="chartType"
             />
 
-            <AdviceBanner 
-              v-if="!isDesktop"
-              :advice="tickerData.advice"
-              tittle="Friendly Advice"
-              class="mb-6 lg:tw-mx-0 tw-mx-3"
-            />
+            <AdviceBanner v-if="!isDesktop" :advice="tickerData.advice" tittle="Friendly Advice"
+              class="mb-6 lg:tw-mx-0 tw-mx-3" />
 
             <!-- Recommendations Table -->
-            <RecommendationsSection 
-              :recommendations="recommendations"
-              class="mb-6 lg:tw-mx-0 tw-mx-3"
-            />
+            <RecommendationsSection :recommendations="recommendations" class="mb-6 lg:tw-mx-0 tw-mx-3" />
           </v-col>
-          <v-col :cols="columns.new" 
-          class="section-ticker-extra tw-bg-[#ffffff] tw-shadow-sm tw-border-r-2 tw-rounded-lg dark:tw-bg-[#1e1e1e] dark:tw-text-white lg-h-full lg:tw-sticky xl:tw-top-[84px] xl:tw-h-[calc(100vh_-_100px)]">
-            <CompanyNews 
-              :company-news="tickerData.companyNews"
-              class="mb-6"
-            />
+          <v-col :cols="columns.new"
+            class="section-ticker-extra tw-bg-[#ffffff] tw-shadow-sm tw-border-r-2 tw-rounded-lg dark:tw-bg-[#1e1e1e] dark:tw-text-white lg-h-full lg:tw-sticky xl:tw-top-[84px] xl:tw-h-[calc(100vh_-_100px)]">
+            <CompanyNews :company-news="tickerData.companyNews" class="mb-6" />
           </v-col>
         </v-row>
+
+        <v-btn
+          id="overview-tour-btn"
+          @click="startTour(0,true)"
+          class=" text-white !tw-text-[1rem] tw-z-[9999] !tw-p-0 hover:!tw-bg-[rgb(2,89,175)] !tw-fixed !tw-bottom-[20px] !tw-right-[30px]"
+          color="rgba(2,89,175,0.65)"
+          size="small"
+          variant="flat"
+          icon="mdi-help-circle-outline"
+        ></v-btn>
       </div>
     </v-container>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, onBeforeMount } from 'vue'
 import { useRoute } from 'vue-router'
-import type { CompanyOverview,  Recommendation } from '@/shared/models/recomendations'
+import type { CompanyOverview, Recommendation } from '@/shared/models/recomendations'
 
 // Components
 import StockChart from '../components/StockChart.vue'
@@ -103,24 +98,31 @@ import { useBreakpoints } from '@/shared/composables/useBreakpoints';
 import { useToast } from '@/shared/composables/useToast'
 import { Anchor } from 'vuetify/lib/types.mjs'
 import { useDebounce } from '@/shared/composables/useDebounce'
-
+import 'driver.js/dist/driver.css'
+import { ChartType } from '@/shared/enums/chart'
+import { useOverviewTour } from '../composable/useOverviewTour'
+import { useOnboardingStore } from '@/shared/store/onboardingStore'
 
 const route = useRoute()
-const {fetchCompanyOverView, fetchCompanyHistoricalPrices, fetchCompanyPredictions} = useTickersStore()
-const {companyOverview, error, companyHistoricalPrices,companyPredictions,errorPredictions} = storeToRefs(useTickersStore())
-const {isMobile,isTablet,isTouchable,isDesktop,isLargeDesktop,screenWidth} = useBreakpoints()
-const { open, state} = useToast();
+const { fetchCompanyOverView, fetchCompanyHistoricalPrices, fetchCompanyPredictions } = useTickersStore()
+const { companyOverview, error, companyHistoricalPrices, companyPredictions, errorPredictions } = storeToRefs(useTickersStore())
+const { isMobile, isTablet, isTouchable, isDesktop, isLargeDesktop, screenWidth } = useBreakpoints()
+const { open, state } = useToast();
+const {overviewData} = storeToRefs(useOnboardingStore())
 
 // State
 const loading = ref(true)
 const tickerData = ref<CompanyOverview | null>(null)
 const interval = ref(Timeframe['1M'])
 const isPredictLoading = ref(false)
+const chartType = ref<ChartType>(ChartType.candlestick)
+const { overviewTour,setCancelIcon } = useOverviewTour(chartType)
+
 
 // Computed
 const tickerId = computed(() => route.params.id as string)
 const recommendations = computed<Recommendation[]>(() => {
-  if(!companyOverview.value){
+  if (!companyOverview.value) {
     return []
   }
   return companyOverview.value.recommendations
@@ -129,16 +131,17 @@ const recommendations = computed<Recommendation[]>(() => {
 const columns = computed<{
   side: number,
   main: number,
-  new:number
-}>(() =>{
-  if(screenWidth.value < 1024){
-    return { side: 12,
+  new: number
+}>(() => {
+  if (screenWidth.value < 1024) {
+    return {
+      side: 12,
       main: 12,
       new: 12
     }
   }
 
-  if(screenWidth.value < 1280){ 
+  if (screenWidth.value < 1280) {
     return {
       side: 3,
       main: 9,
@@ -151,7 +154,15 @@ const columns = computed<{
     main: 6,
     new: 3
   }
-}) 
+})
+
+const startTour = (step: number = 0,showCloseIcon: boolean = true) => {
+ 
+  setCancelIcon(showCloseIcon);
+  
+  overviewTour.start();
+  overviewTour.show(step);
+}
 
 // fetch company overview fill the data in the store
 // exception safe
@@ -160,14 +171,14 @@ const fetchTickerData = async () => {
   const from = new Date()
   from.setDate(from.getDate() - interval.value)
 
-  await fetchCompanyOverView(tickerId.value,from)
-  
-  if(error.value){
+  await fetchCompanyOverView(tickerId.value, from)
+
+  if (error.value) {
     loading.value = false
     return;
   }
 
-  if (!companyOverview.value ) {
+  if (!companyOverview.value) {
     error.value = `Ticker ${tickerId.value} not found`
     loading.value = false
     return
@@ -183,31 +194,31 @@ const fetchTickerData = async () => {
 }
 
 const fetchPredictions = async () => {
-  const {debounced, cancel} = useDebounce()
+  const { debounced, cancel } = useDebounce()
 
   debounced(() => {
     isPredictLoading.value = true
   }, 200)
 
   await fetchCompanyPredictions(tickerId.value)
-  
+
   cancel()
   isPredictLoading.value = false
-  
+
 }
 
 watch(interval, async () => {
-    let now = undefined;
-    if(interval.value !== Timeframe['All']){
-      now = new Date();
-      now.setDate(now.getDate() - interval.value)
-    }
-    
-    await fetchCompanyHistoricalPrices(tickerId.value, now)
+  let now = undefined;
+  if (interval.value !== Timeframe['All']) {
+    now = new Date();
+    now.setDate(now.getDate() - interval.value)
+  }
+
+  await fetchCompanyHistoricalPrices(tickerId.value, now)
 })
 
 watch(companyHistoricalPrices, () => {
-  if(!tickerData.value){
+  if (!tickerData.value) {
     return;
   }
 
@@ -219,35 +230,41 @@ watch(companyHistoricalPrices, () => {
 
 // show error predict
 watch(errorPredictions, () => {
-  const location:Anchor = isMobile.value ? "top center" : "top right";
-  if(errorPredictions.value){
+  const location: Anchor = isMobile.value ? "top center" : "top right";
+  if (errorPredictions.value) {
     open(errorPredictions.value, "red-darken-4", location);
   }
 })
 
-watch(() =>state.show, () => {
-  if(!state.show){
+watch(() => state.show, () => {
+  if (!state.show) {
     errorPredictions.value = null;
   }
 })
-
 
 
 // Lifecycle
 onMounted(async () => {
   loading.value = true
   const now = new Date();
-  now.setDate(now.getDate() - interval.value) 
+  now.setDate(now.getDate() - interval.value)
   await fetchTickerData()
   companyPredictions.value = []
 
-  if(error.value){
+  if (error.value) {
     loading.value = false
     return;
   }
-  
+
   loading.value = false
+
+  if(overviewData.value  && !overviewData.value.overviewDone){
+    setTimeout(() => {
+      startTour(overviewData.value!.overviewStep - 1,false)
+    }, 300);
+  } 
 })
+
 
 </script>
 
@@ -260,6 +277,14 @@ onMounted(async () => {
 .ticker-content {
   max-width: 1400px;
   margin: 0 auto;
+}
+
+#overview-tour-btn{
+  --v-btn-height:18px;
+  display: flex;
+  justify-content: center;
+  align-self: center;
+  font-size: 15px!important;
 }
 
 /* Responsive adjustments */

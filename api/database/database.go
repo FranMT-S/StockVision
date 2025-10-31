@@ -107,6 +107,7 @@ func migrateModels(db *gorm.DB) error {
 		&models.Brokerage{},
 		&models.Ticker{},
 		&models.Recommendation{},
+		&models.Onboarding{},
 	); err != nil {
 		return fmt.Errorf("failed to migrate models: %w", err)
 	}

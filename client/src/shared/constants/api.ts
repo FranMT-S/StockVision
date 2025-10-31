@@ -94,5 +94,13 @@ export const API_CONFIG = {
       const date = formatJustDate(from);
       return `${basePath}?from=${date}`;
     },
+
+    /**
+     * Onboarding endpoint
+     * @returns Onboarding base url
+     */
+    Onboarding: (): string => {
+      return `${API_URL}/api/v1/onboarding`;
+    },
   },
 } as const;

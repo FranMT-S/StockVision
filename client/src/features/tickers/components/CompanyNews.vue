@@ -1,7 +1,7 @@
 <template>
   <section class="company-news-sidebar">
     <v-card-title class="pa-4">
-      <h3 class="text-h6 font-weight-medium dark:tw-text-[#ffffff]">
+      <h3 class="text-h6 font-weight-medium dark:tw-text-[#ffffff] company-news-sidebar-title">
         Company News
       </h3>
     </v-card-title>

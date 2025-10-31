@@ -35,12 +35,12 @@ const textColorDefault = 'tw-text-gray-200'
 const fields = computed(() => {
   
   return [
-    { label: 'V:',value: humanizeNumberFormat(props.data.volume), extraClass: textColorDefault },
-    { label: 'O:',value: `${humanizeNumberFormat(props.data.open)}$`, extraClass: textColorDefault},
-    { label: 'C:',value: `${humanizeNumberFormat(props.data.close)}$`, extraClass: textColorDefault},
-    { label: 'H:',value: `${humanizeNumberFormat(props.data.high)}$`, extraClass:textColorDefault },
-    { label: 'L:',value: `${humanizeNumberFormat(props.data.low)}$`, extraClass: textColorDefault},
-    { label: 'CH:',value: humanizeNumberFormat(props.data.change), extraClass:textColorByTending.value },
+    { label: 'V:',value: `${humanizeNumberFormat(props.data.volume,2)}`, extraClass: textColorDefault },
+    { label: 'O:',value: `${humanizeNumberFormat(props.data.open,2)}$`, extraClass: textColorDefault},
+    { label: 'C:',value: `${humanizeNumberFormat(props.data.close,2)}$`, extraClass: textColorDefault},
+    { label: 'H:',value: `${humanizeNumberFormat(props.data.high,2)}$`, extraClass:textColorDefault },
+    { label: 'L:',value: `${humanizeNumberFormat(props.data.low,2)}$`, extraClass: textColorDefault},
+    { label: 'CH:',value: humanizeNumberFormat(props.data.change,2), extraClass:textColorByTending.value },
     { label: '%CH:',value: `${humanizeNumberFormat(props.data.changePercent)}%`, extraClass:textColorByTending.value },
   ]
 })

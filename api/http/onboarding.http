@@ -1,0 +1,16 @@
+@base = http://localhost:8080
+@url = {{base}}/api/v1
+
+###
+GET {{url}}/onboarding
+Accept: application/json
+Content-Type: application/json
+
+###
+PATCH {{url}}/onboarding
+Accept: application/json
+Content-Type: application/json
+{
+    "overviewStep": 1,
+    "overviewDone": false
+}

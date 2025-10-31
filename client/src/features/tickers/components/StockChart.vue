@@ -10,6 +10,7 @@
           <template #activator="{ props }">
             <v-btn 
               v-bind="props"
+              id="candlestick-btn"
               :color="chartType === ChartType.candlestick ? 'primary' : 'secondary'" 
               variant="tonal" 
               @click="toggleChartType(ChartType.candlestick)" 
@@ -23,6 +24,7 @@
         <v-tooltip text="Closing Price Chart" location="top" open-delay="500">  
           <template #activator="{ props }">
             <v-btn 
+              id="area-btn"
               v-bind="props"
               :color="chartType === ChartType.area ? 'primary' : 'secondary'" 
               variant="tonal" 
@@ -34,7 +36,8 @@
         </v-tooltip>
 
         <v-btn      
-          v-if="chartType === ChartType.candlestick"
+          id="predict-btn"
+          v-show="chartType === ChartType.candlestick"
           :color="isShowPredict ? 'primary' : 'secondary'" 
           :class="{'animated-button':isPredictLoading}"
           variant="tonal" @click="toggleShowPredict()"
@@ -42,7 +45,7 @@
         >
           <v-icon class="d-flex  !tw-text-[18px]" icon="mdi-creation" size="17" /> 
           <span v-if="!isShowPredict && predictNextWeek.length > 0">Show Predict</span>
-          <span v-else-if="!isShowPredict ">{{ predictNextWeek.length === 0  ? 'Get Ia Predict' : 'Predicting'}}</span>
+          <span v-else-if="!isShowPredict ">{{ predictNextWeek.length === 0 && !isPredictLoading ? 'Get Ia Predict' : 'Predicting'}}</span>
           <span v-if="isShowPredict ">Hide Predict</span>
           <i v-if="isPredictLoading" class="loader --3"></i>
         </v-btn>
@@ -81,7 +84,7 @@
 import FloatingTooltip from '@/shared/components/FloatingTooltip.vue';
 import { useDebounce } from '@/shared/composables/useDebounce';
 import { Timeframe } from '@/shared/enums/timeFrame';
-import { CompanyNew, HistoricalPrice, StockHLOC } from '@/shared/models/recomendations';
+import { HistoricalPrice, StockHLOC } from '@/shared/models/recomendations';
 import html2canvas from 'html2canvas';
 import {
   AreaData,
@@ -104,9 +107,7 @@ import {
 } from 'lightweight-charts';
 import { computed, ComputedRef, onMounted, onUnmounted, ref, shallowReactive, watch } from 'vue';
 import CrossHairDetails from './CrossHairDetails.vue';
-import { useToast } from '@/shared/composables/useToast';
-import { Anchor } from 'vuetify/lib/types.mjs';
-import { useBreakpoints } from '@/shared/composables/useBreakpoints';
+import { ChartType, Scales } from '@/shared/enums/chart';
 
 interface Props {
   ticker: string;
@@ -118,6 +119,7 @@ interface Props {
   predictError?: string | null;
   isPredictLoading?: boolean;
   isTouchDevice?: boolean;
+  chartType?: ChartType;
 }
 
 type TSeriesType = 'Candlestick' | 'Line' | 'Area' | 'Histogram' | 'Predict' | 'PredictHistogram';
@@ -135,16 +137,7 @@ type CharData = {
   stockHLOC: StockHLOC[]
 }
 
-enum Scales {
-  'volume' = 'volume',
-  'right' = 'right'
-}
 
-enum ChartType {
-  'candlestick' = 'candlestick',
-  'line' = 'line',
-  'area' = 'area'
-}
 
 const props = withDefaults(defineProps<Props>(), {
   historicalData: () => [],
@@ -154,19 +147,29 @@ const props = withDefaults(defineProps<Props>(), {
   initialInterval: Timeframe['1M'],
   predictNextWeek: () => [],
   predictError: () => "",
-  isPredictLoading: () => false
+  isPredictLoading: () => false,
+  chartType: () => ChartType['candlestick']
 });
 
 const emit = defineEmits(['update:timeframe','update:predict'])
 const {debounced} = useDebounce()
 const chartContainer = ref<HTMLElement | null>(null);
-const chartType = ref<ChartType>(ChartType['candlestick']);
+const chartType = ref<ChartType>(props.chartType);
 const timeframe = ref(props.initialInterval);
 const visibleRange = ref<{ from: Time; to: Time } | null>(null);
 const isShowPredict = ref<boolean>(false);
 const isGeneratingScreenshot = ref<boolean>(false);
 const selectedCrosshairData = ref<StockHLOC | null>(null);
 let chart: IChartApi | null = null;
+
+const series = shallowReactive<Record<TSeriesType, ISeriesApi<any> | null>>({
+  Candlestick: null,
+  Line: null,
+  Area: null,
+  Histogram: null,
+  Predict: null,
+  PredictHistogram: null
+});
 
 const timeframeOptions =ref([
     { value: Timeframe['1M'], label: '1M' },
@@ -177,6 +180,9 @@ const timeframeOptions =ref([
 ]);
 
 
+const formatterPrice = (price: number) => `${price.toFixed(2)}$`;
+const formatterVolume = (price: number) => `${price.toFixed(2)}U`;
+
 // styles of the elements in charts
 const CandleSeriesTheme: CandlestickSeriesPartialOptions = {
   priceScaleId: Scales.right,
@@ -185,6 +191,10 @@ const CandleSeriesTheme: CandlestickSeriesPartialOptions = {
   wickUpColor: '#089981',
   wickDownColor: '#f23645',
   borderVisible: false,
+  priceFormat:{
+    type: 'custom',
+    formatter: formatterPrice,
+  }
 }
 
 const CandlePredictSeriesTheme: CandlestickSeriesPartialOptions = {
@@ -195,33 +205,42 @@ const CandlePredictSeriesTheme: CandlestickSeriesPartialOptions = {
   wickUpColor: '#1976d2',
   wickDownColor: '#ff9800',
   borderVisible: false,   
+  priceFormat:{
+    type: 'custom',
+    formatter: formatterPrice,
+  }
 }
 
 const VolumeSeriesTheme: HistogramSeriesPartialOptions = {
   priceScaleId: Scales.volume, 
   color: '#2962FF',   
+  priceFormat:{
+    type: 'custom',
+    formatter: formatterVolume,
+  }
 };
 
 const PredictVolumeSeriesTheme: HistogramSeriesPartialOptions = {
   priceScaleId: Scales.volume, 
   color: '#ff9800',
+    priceFormat:{
+    type: 'custom',
+    formatter: formatterVolume,
+  }
 }
 
 const LinearAreaSeriesTheme: AreaSeriesPartialOptions = {
   priceScaleId: Scales.right,
   lineColor: '#2962FF', 
   topColor: '#2962FF', 
-  bottomColor: 'rgba(41, 98, 255, 0.28)' 
+  bottomColor: 'rgba(41, 98, 255, 0.28)',
+  priceFormat:{
+    type: 'custom',
+    formatter: formatterPrice,
+  } 
 }
 
-const series = shallowReactive<Record<TSeriesType, ISeriesApi<any> | null>>({
-  Candlestick: null,
-  Line: null,
-  Area: null,
-  Histogram: null,
-  Predict: null,
-  PredictHistogram: null
-});
+
 
 const predictChartData: ComputedRef<{
   mainChartData: CandlestickData[], 
@@ -358,9 +377,7 @@ const initChart = () => {
       visible: true,
       borderColor: '#cccccc',
     },
-    localization: {
-      priceFormatter: (price: number) => `${price.toFixed(2)}$`,
-    },
+
     handleScroll:!props.isTouchDevice,
     handleScale:!props.isTouchDevice,
   });
@@ -592,6 +609,11 @@ const takeScreenshot = async () => {
     isGeneratingScreenshot.value = false;
   }
 };
+
+watch(() => props.chartType, () => {
+  chartType.value = props.chartType;
+  createMainSeries()
+})
 
 watch(timeframe, async () => {
   emit('update:timeframe', timeframe.value)
@@ -870,11 +892,6 @@ onUnmounted(() => {
 		transform: translateY(0.3vmin);
 	}
 }
-
-
-
-
-
 
 
 </style>
