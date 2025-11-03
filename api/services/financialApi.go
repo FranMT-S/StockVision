@@ -34,10 +34,10 @@ func (f FinancialCacheExpiration) Normalize() FinancialCacheExpiration {
 
 // FinancialService represents a service for financial data
 type FinancialService struct {
-	baseURL         string
-	token           string
-	client          CustomClient.CustomClient
-	cache           cache.ICache
+	BaseURL         string
+	Token           string
+	Client          CustomClient.CustomClient
+	Cache           cache.ICache
 	CacheExpiration FinancialCacheExpiration
 }
 
@@ -46,10 +46,10 @@ func NewFinancialService(cache cache.ICache, cacheExpiration FinancialCacheExpir
 	cacheExpiration = cacheExpiration.Normalize()
 
 	return &FinancialService{
-		baseURL: config.FinancialModeling().Url,
-		token:   config.FinancialModeling().Token,
-		client:  CustomClient.NewCustomClient(config.FinancialModeling().Url),
-		cache:   cache,
+		BaseURL: config.FinancialModeling().Url,
+		Token:   config.FinancialModeling().Token,
+		Client:  CustomClient.NewCustomClient(config.FinancialModeling().Url),
+		Cache:   cache,
 		CacheExpiration: FinancialCacheExpiration{
 			HistoricalPrices: cacheExpiration.HistoricalPrices,
 			CompanyData:      cacheExpiration.CompanyData,
@@ -61,7 +61,7 @@ func NewFinancialService(cache cache.ICache, cacheExpiration FinancialCacheExpir
 func (s *FinancialService) GetHistoricalPrices(ctx context.Context, ticker string, from time.Time, to time.Time) ([]models.HistoricalPrice, error) {
 	params := map[string]string{
 		"symbol": strings.ToUpper(ticker),
-		"apikey": s.token,
+		"apikey": s.Token,
 	}
 
 	if !from.IsZero() {
@@ -75,9 +75,9 @@ func (s *FinancialService) GetHistoricalPrices(ctx context.Context, ticker strin
 	expiration := calculateHistoricDataExpirationInMinutes(365)
 	key := fmt.Sprintf("FinancialService:historical_prices:%s:%s:%s", ticker, from.Format("2006-01-02"), to.Format("2006-01-02"))
 
-	historicalPrices, err := cache.GetOrLoad(ctx, s.cache, key, expiration, func() ([]models.HistoricalPrice, error) {
+	historicalPrices, err := cache.GetOrLoad(ctx, s.Cache, key, expiration, func() ([]models.HistoricalPrice, error) {
 		var historicalPrices []models.HistoricalPrice
-		if err := s.client.Get("/stable/historical-price-eod/full", params, &historicalPrices); err != nil {
+		if err := s.Client.Get("/stable/historical-price-eod/full", params, &historicalPrices); err != nil {
 			return nil, fmt.Errorf("[FinancialService] failed to retrieve historical prices id: %s: %w", ticker, err)
 		}
 
@@ -94,7 +94,7 @@ func (s *FinancialService) GetHistoricalPrices(ctx context.Context, ticker strin
 // GetLogo returns the logo of a company as a byte array
 func (s *FinancialService) GetLogo(ctx context.Context, ticker string) ([]byte, error) {
 	url := fmt.Sprintf("/image-stock/%s.png", strings.ToUpper(ticker))
-	logo, err := s.client.GetRaw(url, nil)
+	logo, err := s.Client.GetRaw(url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("[FinancialService] failed to retrieve logo id: %s: %w", ticker, err)
 	}
@@ -104,7 +104,7 @@ func (s *FinancialService) GetLogo(ctx context.Context, ticker string) ([]byte, 
 
 // GetLogoUrl returns the logo url of a company
 func (s *FinancialService) GetLogoUrl(ctx context.Context, ticker string) (string, error) {
-	url := fmt.Sprintf("%s/image-stock/%s.png", s.baseURL, strings.ToUpper(ticker))
+	url := fmt.Sprintf("%s/image-stock/%s.png", s.BaseURL, strings.ToUpper(ticker))
 
 	return url, nil
 }
@@ -113,15 +113,15 @@ func (s *FinancialService) GetLogoUrl(ctx context.Context, ticker string) (strin
 func (s *FinancialService) GetCompanyData(ctx context.Context, ticker string) (models.CompanyData, error) {
 	params := map[string]string{
 		"symbol": strings.ToUpper(ticker),
-		"apikey": s.token,
+		"apikey": s.Token,
 	}
 
 	key := fmt.Sprintf("FinancialService:company_data:%s", ticker)
 	expiration := s.CacheExpiration.CompanyData
 
-	companyData, err := cache.GetOrLoad(ctx, s.cache, key, expiration, func() (models.CompanyData, error) {
+	companyData, err := cache.GetOrLoad(ctx, s.Cache, key, expiration, func() (models.CompanyData, error) {
 		var companyData []models.CompanyData
-		if err := s.client.Get("/stable/profile", params, &companyData); err != nil {
+		if err := s.Client.Get("/stable/profile", params, &companyData); err != nil {
 			return models.CompanyData{}, fmt.Errorf("[FinancialService] failed to retrieve company data id: %s: %w", ticker, err)
 		}
 		return companyData[0], nil

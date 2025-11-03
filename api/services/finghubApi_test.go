@@ -42,5 +42,4 @@ func TestNormalizeFinghubCacheExpiration(t *testing.T) {
 			assert.Equal(t, tc.expected, result)
 		})
 	}
-
 }

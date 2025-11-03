@@ -18,8 +18,9 @@ func (s SanatizerString) SanatizeSQL() SanatizerString {
 }
 
 func (s SanatizerString) SanatizedAll() SanatizerString {
-	ss := s.SanatizeHTML()
-	ss = s.SanatizeSQL()
+	ss := s.SanatizeHTML().
+		SanatizeSQL()
+
 	return ss
 }
 

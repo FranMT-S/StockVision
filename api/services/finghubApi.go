@@ -13,10 +13,10 @@ import (
 )
 
 type FinghubService struct {
-	baseURL         string
-	client          CustomClient.CustomClient
-	token           string
-	cache           cache.ICache
+	BaseURL         string
+	Client          CustomClient.CustomClient
+	Token           string
+	Cache           cache.ICache
 	CacheExpiration FinghubCacheExpiration
 }
 
@@ -36,10 +36,10 @@ func NewFinghubService(cache cache.ICache, cacheExpiration FinghubCacheExpiratio
 	cacheExpiration = cacheExpiration.Normalize()
 
 	return &FinghubService{
-		client:          CustomClient.NewCustomClient(config.Finnhub().Url),
-		baseURL:         config.Finnhub().Url,
-		token:           config.Finnhub().Token,
-		cache:           cache,
+		Client:          CustomClient.NewCustomClient(config.Finnhub().Url),
+		BaseURL:         config.Finnhub().Url,
+		Token:           config.Finnhub().Token,
+		Cache:           cache,
 		CacheExpiration: cacheExpiration,
 	}
 }
@@ -47,7 +47,7 @@ func NewFinghubService(cache cache.ICache, cacheExpiration FinghubCacheExpiratio
 func (s *FinghubService) GetNews(ctx context.Context, ticker string, from time.Time, to time.Time) ([]models.CompanyNew, error) {
 	queryParams := map[string]string{
 		"symbol": strings.ToUpper(ticker),
-		"token":  s.token,
+		"token":  s.Token,
 	}
 
 	var fromString string
@@ -72,9 +72,9 @@ func (s *FinghubService) GetNews(ctx context.Context, ticker string, from time.T
 
 	cacheKey := fmt.Sprintf("FinghubService:news:%s:%s:%s", ticker, fromString, toString)
 	expiration := s.CacheExpiration.News
-	news, err := cache.GetOrLoad(ctx, s.cache, cacheKey, expiration, func() ([]models.CompanyNew, error) {
+	news, err := cache.GetOrLoad(ctx, s.Cache, cacheKey, expiration, func() ([]models.CompanyNew, error) {
 		var news []models.CompanyNew
-		if err := s.client.Get("/company-news", queryParams, &news); err != nil {
+		if err := s.Client.Get("/company-news", queryParams, &news); err != nil {
 			return nil, fmt.Errorf("[FinghubService] failed to retrieve news id: %s: %w", ticker, err)
 		}
 		return news, nil
