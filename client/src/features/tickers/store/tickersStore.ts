@@ -80,7 +80,7 @@ export const useTickersStore = defineStore('tickers', () => {
     // avoid flickering if the request is too fast
     debounced(() => {
       loading.value = true
-    }, 200)
+    }, 300)
     
     abortIfControllerIsActive(tickerCancellationToken.value)
     tickerCancellationToken.value = new AbortController()

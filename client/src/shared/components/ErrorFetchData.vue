@@ -6,6 +6,7 @@
     <h3 class="text-h6 text-grey-darken-2 mb-2">Failed to load data</h3>
     <p class="text-body-2 text-grey-darken-1 mb-4">{{ error }}</p>
     <v-btn
+      data-testid="try-again-button"
       color="primary"
       variant="outlined"
       @click="() => emit('click')"
