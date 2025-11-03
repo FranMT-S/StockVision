@@ -98,7 +98,6 @@ import { useBreakpoints } from '@/shared/composables/useBreakpoints';
 import { useToast } from '@/shared/composables/useToast'
 import { Anchor } from 'vuetify/lib/types.mjs'
 import { useDebounce } from '@/shared/composables/useDebounce'
-import 'driver.js/dist/driver.css'
 import { ChartType } from '@/shared/enums/chart'
 import { useOverviewTour } from '../composable/useOverviewTour'
 import { useOnboardingStore } from '@/shared/store/onboardingStore'
