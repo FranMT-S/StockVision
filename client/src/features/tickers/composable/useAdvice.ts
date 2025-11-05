@@ -1,7 +1,9 @@
 import { getAdviceActionColor, getAdviceActionIcon } from "@/shared/helpers/adviceActions"
 import { computed, ref, watch } from "vue"
 
-
+/** 
+ * Use this composable to get the action, icon and color of the advice
+ */
 export const useAdvice = (initialAction: string) => {
   const action = ref(initialAction.toUpperCase())
   const actionUpper = computed(() => action.value.toUpperCase())

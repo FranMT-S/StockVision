@@ -5,6 +5,7 @@ import { Ref, nextTick } from 'vue';
 import { useOnboardingStore } from '@/shared/store/onboardingStore';
 import { storeToRefs } from 'pinia';
 
+/** Create a tour to guide the user through the overview */
 export const useOverviewTour = (chartTypeRef: Ref<ChartType>,options?:{
   cancelIcon?: boolean,
 }) => {
