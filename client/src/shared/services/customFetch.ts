@@ -11,7 +11,6 @@ export const customFetch = async <T>(input: RequestInfo | URL, init?: RequestIni
   
   try {
     response = await fetch(input, {
-      credentials:"omit",
       ...init});
     data = await response.json();
     data.status = response.status;
