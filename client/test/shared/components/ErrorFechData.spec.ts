@@ -22,9 +22,9 @@ describe("ErrorComponent", () => {
     expect(wrapper.find('[data-testid="try-again-button"]').text()).toBe("Try Again")
   })
 
-  it("Must emit click event when button is clicked", () => {
+  it("Must emit click event when button is clicked",async () => {
     const button = wrapper.find('[data-testid="try-again-button"]')
-    button.trigger('click')
+    await button.trigger('click')
     expect(wrapper.emitted().click).toBeTruthy()
   })
 })

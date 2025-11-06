@@ -8,6 +8,7 @@ export const useAdvice = (initialAction: string) => {
   const action = ref(initialAction.toUpperCase())
   const actionUpper = computed(() => action.value.toUpperCase())
 
+  /** transform the action to uppercase */
   watch(action, (newValue) => {
     const upper = newValue.toUpperCase()
     if (newValue !== upper) {

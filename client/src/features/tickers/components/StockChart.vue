@@ -578,6 +578,9 @@ const handleResize = () => {
   }, 100)
 }
 
+/**
+ * Go to the last stock in the chart
+ */
 const GoToLastStock = () => {
   if (!chart) return;
     chart.timeScale().scrollToRealTime();
@@ -610,18 +613,20 @@ const takeScreenshot = async () => {
   }
 };
 
+// update the chart type
 watch(() => props.chartType, () => {
   chartType.value = props.chartType;
   createMainSeries()
 })
 
+// update the timeframe
 watch(timeframe, async () => {
   emit('update:timeframe', timeframe.value)
   zoomBasedInIntervalTime()
 });
 
+// update the serie when the predict data changes
 watch(() => props.predictNextWeek, async () => {
-
   if(props.predictNextWeek?.length > 0){
     isShowPredict.value = true;
   }
@@ -631,6 +636,7 @@ watch(() => props.predictNextWeek, async () => {
   createMainSeries()
 });
 
+// update the chart when the touch device changes
 watch(() => props.isTouchDevice, (newTouchable) => {
   if(chart){
     chart.applyOptions({
@@ -642,6 +648,7 @@ watch(() => props.isTouchDevice, (newTouchable) => {
   createMainSeries();
 });
 
+// update the chart when the visible range changes
 watch(visibleRange, () => {
   if (chart) {
     if (visibleRange.value) {

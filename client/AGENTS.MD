@@ -3,7 +3,9 @@
 
 # structure
 - the directory must be follow the screaming architecture
-- the testing must be creating in the directory test
+- the testing must be creating in the directory test in the root directory of the project
+- the files must be a spec.ts
+- the directory 'test', must be allow the same structure of the directory 'src'
 - the domain features must be were in the feature src/features 
 - global components and funcionality must be in src/shared
 - every features can have pages, components, services, store and directory necessary

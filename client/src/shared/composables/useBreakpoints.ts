@@ -18,7 +18,7 @@ export const useBreakpoints = () => {
     screenWidth.value = window.innerWidth
   }
 
-    const detectTouch = () => {
+  const detectTouch = () => {
     isTouchable.value = 'ontouchstart' in window || navigator.maxTouchPoints > 0
   }
 
@@ -29,7 +29,6 @@ export const useBreakpoints = () => {
   
   onUnmounted(() => {
     window.removeEventListener('resize', updateWidth)
-    detectTouch()
   })
 
   const breakpoint = computed<Breakpoint>(() => {
