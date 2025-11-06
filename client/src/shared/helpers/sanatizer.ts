@@ -4,12 +4,11 @@
 export function sanitizeSQL(input: string | null | undefined): string {
   if (!input) return '';
   return input
-  .replace(/'/g, "''")
   .replace(/;/g, '')
   .replace(/\*/g, '')
   .replace(/\//g, '')
   .replace(/\\/g, '')
-  .replace(/-/g, ''); 
+  .replace(/--/g, ''); 
 }
 
 /**
