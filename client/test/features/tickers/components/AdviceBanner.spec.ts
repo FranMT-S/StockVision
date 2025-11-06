@@ -7,7 +7,7 @@ import { computed, ref } from 'vue'
 describe('renders advice correctly', () => {
 
   vi.mock('@/features/tickers/composable/useAdvice', () => ({
-    useAdvice: vi.fn() // mock "vacío" inicialmente
+    useAdvice: vi.fn() 
   }))
 
   const cases = [
