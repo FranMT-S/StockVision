@@ -80,7 +80,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, onBeforeMount } from 'vue'
+import { ref, computed, onMounted, watch, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import type { CompanyOverview, Recommendation } from '@/shared/models/recomendations'
 
@@ -264,6 +264,9 @@ onMounted(async () => {
   } 
 })
 
+onUnmounted(() => {
+  overviewTour.cancel();
+})
 
 </script>
 
