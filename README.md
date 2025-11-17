@@ -96,3 +96,9 @@ cd client
 pnpm run dev
 ```
 
+## Demo
+
+https://github.com/user-attachments/assets/5fc323a7-dde0-412a-a89b-76813264ba1f
+
+
+
