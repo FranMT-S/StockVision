@@ -30,59 +30,89 @@ terraform
 # Deploy Client and Api
 
 
+## First we set the local vars to easy the process
 
-1. create repository
+Replace the values with your own
 
 ``` bash
-aws ecr create-repository --repository-name stockvision-api --region us-east-1
-
-aws ecr create-repository --repository-name stockvision-app --region us-east-1
+# bash
+set region=us-east-1
+set aws_account_id=123456789012
 ```
 
-2. create the images with the next command and the root of the project
+or
+
+``` powershell
+# powershell
+$region = "us-east-1"
+$aws_account_id = "123456789012"
+```
+
+1. Create repository
+
+``` bash
+aws ecr create-repository --repository-name stockvision-api --region $region
+aws ecr create-repository --repository-name stockvision-app --region $region
+```
+
+
+
+2. Create the images with the next command and the root of the project
 
 ``` bash
 docker compose up 
 ```
 
-3. tag the images
+
+3. Tag the images
 
 replace the values with the uri of the repository, the structure is `aws_account_id.dkr.ecr.region.amazonaws.com/repository_name:tag`
 
 ``` bash
-docker tag stockvision-api:latest aws_account_id.dkr.ecr.region.amazonaws.com/stockvision-api:latest
-
-docker tag stockvision-app:latest aws_account_id.dkr.ecr.region.amazonaws.com/stockvision-app:latest
+docker tag stockvision-api:latest $aws_account_id.dkr.ecr.$region.amazonaws.com/stockvision-api:latest
+docker tag stockvision-app:latest $aws_account_id.dkr.ecr.$region.amazonaws.com/stockvision-app:latest
 ```
 
-4. push the images
 
-get permissions to push the images with the next command, replace the values region and aws_account_id with the values of your environment
+4. Push the images
+
+Get permissions to push the images with the next command, replace the values region and aws_account_id with the values of your environment
 
 ``` bash
-aws ecr get-login-password --region region | docker login --username AWS --password-stdin aws_account_id.dkr.ecr.region.amazonaws.com
+aws ecr get-login-password --region $region | docker login --username AWS --password-stdin $aws_account_id.dkr.ecr.$region.amazonaws.com
 ```
 
 
-after get the permissions push the images
+After get the permissions push the images
 ``` bash
-docker push aws_account_id.dkr.ecr.region.amazonaws.com/stockvision-api:latest
-
-docker push aws_account_id.dkr.ecr.region.amazonaws.com/stockvision-app:latest
+docker push $aws_account_id.dkr.ecr.$region.amazonaws.com/stockvision-api:latest
+docker push $aws_account_id.dkr.ecr.$region.amazonaws.com/stockvision-app:latest
 ```
+
 
 You can read more about [here](https://docs.aws.amazon.com/AmazonECR/latest/userguide/docker-push-ecr-image.html)
 
 ## Terraform Client and Api
 
-1. navigate to the folder main
+1. Navigate to the folder main
 
 ``` bash
 cd main
 ```
 
-2. copy the template.tfvars in a new file terraform.tfvars and fill the values
+2. Copy the template.tfvars in a new file terraform.tfvars and fill the values
 
+``` bash
+# bash
+cp template.tfvars terraform.tfvars
+```
+
+or
+
+``` powershell
+# powershell
+copy template.tfvars terraform.tfvars
+```
 
 2. run terraform
 

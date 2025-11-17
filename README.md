@@ -61,7 +61,7 @@ The database is a [cockroachdb](https://www.cockroachlabs.com/docs/v25.3/install
 * [Infrastructure](./terraform)
 
 ## Docker compose
-you can use docker compose to run the api and the client, after setup de environment variables in the .env file of the api and client folders.
+you can use docker compose to run the api and the client, **after setup de environment variables** in the .env file of the api and client folders.
 
 ```bash
 docker-compose up
@@ -76,9 +76,18 @@ this also will create a instance of cockroachdb in the cloud, you can use the co
 1. run the api
 The first time you run the api you must run the `fill-db` command to populate the database.
 
+
+
 ```bash
 cd api
-go run main.go --fill-db
+go run main.go fill-db --json data/recommendations.json
+```
+
+if you have api key to get the recommendations data you can use the 
+command
+
+```bash
+go run main.go fill-db
 ```
 
 2. run the client

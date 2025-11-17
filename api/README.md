@@ -70,6 +70,15 @@ go mod tidy
 Configure the environment variables and run the application.
 
 **First time must populate the database** 
+if you have a json file with the recommendations data you can use the 
+command
+
+```bash
+go run main.go fill-db --json data/recommendations.json
+```
+
+if you have a api key to get the recommendations data you can use the 
+
 ```bash
 go run main.go fill-db
 ```
