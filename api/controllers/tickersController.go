@@ -83,7 +83,7 @@ func (c *TickersController) ListTickers(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
-	var twentyDaysAgo time.Time = time.Now().AddDate(0, 0, -20)
+	var from time.Time = time.Now().AddDate(0, 0, -20)
 	var wg sync.WaitGroup
 	// Get company data
 	for i, rec := range recomendations {
@@ -96,7 +96,7 @@ func (c *TickersController) ListTickers(w http.ResponseWriter, r *http.Request) 
 				apilogger.Logger().Error().Err(err).Msg("[ListTickers] Failed to retrieve company data with ID:" + string(r.Ticker.ID))
 			}
 
-			historicalPrices, err := c.tickerService.GetHistoricalPrices(ctxCancel, string(r.Ticker.ID), twentyDaysAgo, time.Time{})
+			historicalPrices, err := c.tickerService.GetHistoricalPrices(ctxCancel, string(r.Ticker.ID), from, time.Time{})
 			if err != nil {
 				apilogger.Logger().Error().Err(err).Msg("[ListTickers] Failed to retrieve historical prices with ID:" + string(r.Ticker.ID))
 			}
@@ -236,9 +236,9 @@ func (c *TickersController) GetTickerPredictions(w http.ResponseWriter, r *http.
 	}
 
 	now := time.Now()
-	before := time.Now().AddDate(0, 0, -30)
+	from := time.Now().AddDate(0, 0, -30)
 
-	historicalPrices, err := c.tickerService.GetHistoricalPrices(ctxCancel, id, before, now)
+	historicalPrices, err := c.tickerService.GetHistoricalPrices(ctxCancel, id, from, now)
 	if err != nil {
 		apilogger.Logger().Error().Err(err).Msg("[GetTickerPredictions] Failed to retrieve historical prices with ID:" + id)
 		respondError(w, http.StatusInternalServerError, "Failed in generate predictions, try again later")

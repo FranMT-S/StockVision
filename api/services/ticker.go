@@ -7,6 +7,7 @@ import (
 	"api/models/filters"
 	"api/models/ratings"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -99,7 +100,35 @@ func (s *tickerService) GetTickers(ctx context.Context, filter filters.Filters) 
 		tickers[i].Sentiment = tickerSentiment.Sentiment
 	}
 
+	tickers = sortByPrefix(tickers, filter.Query)
+
 	return tickers, total, err
+}
+
+func sortByPrefix(tickers []models.Ticker, prefix string) []models.Ticker {
+
+	sliceCopy := make([]models.Ticker, len(tickers))
+	copy(sliceCopy, tickers)
+
+	sort.Slice(sliceCopy, func(i, j int) bool {
+		firstWordFirstCompany := strings.Split(sliceCopy[i].Company, " ")[0]
+		firstWordSecondCompany := strings.Split(sliceCopy[j].Company, " ")[0]
+
+		firstCompanyHasPrefix := strings.HasPrefix(sliceCopy[i].Company, prefix)
+		secondCompanyHasPrefix := strings.HasPrefix(sliceCopy[j].Company, prefix)
+
+		if firstCompanyHasPrefix && secondCompanyHasPrefix {
+			return len(firstWordFirstCompany) < len(firstWordSecondCompany)
+		}
+
+		if firstCompanyHasPrefix {
+			return true
+		}
+
+		return false
+	})
+
+	return sliceCopy
 }
 
 func createRatingCollection(recommendations []models.Recommendation) ratings.RatingCollection {

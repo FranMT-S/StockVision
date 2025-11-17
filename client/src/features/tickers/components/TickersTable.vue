@@ -1,123 +1,118 @@
 <template>
-  <v-table class="recommendations-table"  density="comfortable">
-    <thead class="h-12">
-      <tr class="text-center">
-        <th class="text-left font-weight-bold text-grey-darken-2 ps-14 py-1">Stock</th>
-        <th class="text-left font-weight-bold text-grey-darken-2 pa-1">Price</th>
-        <th class="text-left font-weight-bold text-grey-darken-2 pa-1">Change</th>
-        <th class="text-center font-weight-bold text-grey-darken-2 pa-1">Sentiment</th>
-        <th class="text-center font-weight-bold text-grey-darken-2 pa-1">Action Advice</th>
-        <th class="text-center font-weight-bold text-grey-darken-2 pa-1">Last Rating Date</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr 
-        v-for="stock in rows" 
-        :key="stock.ticker"
-        class="stock-row"
-        @click="handleRowClick(stock)"
+  <v-data-table
+    :headers="headers"
+    :items="rows"
+    :items-per-page="-1"
+    :hide-default-footer="true"
+    class="recommendations-table"
+    density="compact"
+    @click:row="handleRowClick"
+  >
+    <!-- Stock Column -->
+    <template v-slot:item.ticker="{ item }">
+      <div class="d-flex align-center">
+        <v-avatar 
+          size="32" 
+          class="mr-3"
+          :color="getAvatarColor(item.ticker)"
+        >
+          <v-img
+            v-if="item.url"
+            :src="item.url"
+            :alt="item.companyName"
+            class="rounded"
+          />
+          <span v-else class="text-white font-weight-bold text-caption">
+            {{ getCompanyInitials(item.companyName) }}
+          </span>
+        </v-avatar>
+        <div>
+          <div class="tw-flex tw-gap-2 tw-items-baseline font-weight-medium text-grey-darken-3">
+            <span class="tw-text-[15px]">{{ item.companyName }}</span>
+            <span class="tw-text-[12px] tw-text-gray-500">{{ item.ticker }}</span>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <!-- Price Column -->
+    <template v-slot:item.price="{ item }">
+      <div class="text-body-2 tw-text-[15px] font-weight-medium text-grey-darken-3">
+        ${{ item.price.toFixed(2) }}
+      </div>
+    </template>
+
+    <!-- Change Column -->
+    <template v-slot:item.change="{ item }">
+      <div 
+        class="d-flex align-center"
+        :class="getChangeColorClass(item.change)"
       >
-        <td class="pa-2 py-0">
-          <div class="d-flex align-center">
-            
-            <v-avatar 
-              size="32" 
-              class="mr-3"
-              :color="getAvatarColor(stock.ticker)"
-            >
-            <v-img
-              v-if="stock.url"
-              :src="stock.url"
-              :alt="stock.companyName"
-              class="rounded"
-            />
-            <span v-else class="text-white font-weight-bold text-caption">
-              {{ getCompanyInitials(stock.companyName) }}
-            </span>
-            </v-avatar>
-            <div>
-              <div class="tw-flex tw-gap-2 tw-items-baseline font-weight-medium text-grey-darken-3">
-                <span class="tw-text-[15px]">{{ stock.companyName }}</span>
-                <span class="tw-text-[12px] tw-text-gray-500">{{ stock.ticker }}</span>
-              </div>
-        
-            </div>
-          </div>
-        </td>
+        <v-icon 
+          :icon="item.change >= 0 ? 'mdi-trending-up' : 'mdi-trending-down'"
+          size="x-small"
+          class="mr-1"
+        />
+        <span class="text-body-2 tw-text-[15px] font-weight-medium">
+          {{ item.change >= 0 ? '+' : '' }}${{ item.change.toFixed(2) }}
+          ({{ item.change >= 0 ? '+' : '' }}{{ item.changePercentage.toFixed(2) }}%)
+        </span>
+      </div>
+    </template>
 
-        <!-- Price Column -->
-        <td class="text-left pa-2 py-0">
-          <div class="text-body-2 tw-text-[15px] font-weight-medium text-grey-darken-3">
-            ${{ stock.price.toFixed(2) }}
-          </div>
-        </td>
+    <!-- Sentiment Column -->
+    <template v-slot:item.sentiment="{ item }">
+      <div class="d-flex align-center justify-center ga-2">
+        <v-avatar size="24">
+          <v-icon 
+            :icon="getSentimentIcon(item.sentiment)"
+            :color="getSentimentColor(item.sentiment)"
+            size="small"
+          />
+        </v-avatar>
+        <v-chip 
+          size="small"
+          class="tw-capitalize"  
+          :color="getSentimentColor(item.sentiment)" 
+          variant="outlined"
+        >
+          {{ item.sentiment }}
+        </v-chip>
+      </div>
+    </template>
 
-        <!-- Change Column -->
-        <td class="text-left pa-2 py-0">
-          <div 
-            class="d-flex align-center"
-            :class="getChangeColorClass(stock.change)"
-          >
-            <v-icon 
-              :icon="stock.change >= 0 ? 'mdi-trending-up' : 'mdi-trending-down'"
-              size="x-small"
-              class="mr-1"
-            />
-            <span class="text-body-2 tw-text-[15px] font-weight-medium">
-              {{ stock.change >= 0 ? '+' : '' }}${{ stock.change.toFixed(2) }}
-              ({{ stock.change >= 0 ? '+' : '' }}{{ stock.changePercentage.toFixed(2) }}%)
-            </span>
-          </div>
-        </td>
+    <!-- Action Advice Column -->
+    <template v-slot:item.advice="{ item }">
+      <div class="d-flex align-center justify-center ga-2">
+        <v-avatar size="24">
+          <v-icon 
+            :icon="getAdviceActionIcon(item.advice)"
+            :class="getAdviceActionColor(item.advice).class"
+            size="small"
+          />
+        </v-avatar>
+        <v-chip 
+          size="small"
+          class="tw-capitalize"  
+          :color="getAdviceActionColor(item.advice).vuetify" 
+          variant="outlined"
+        >
+          {{ item.advice }}
+        </v-chip>
+      </div>
+    </template>
 
-        <!-- Sentiment Column -->
-        <td class="text-center pa-2 py-0">
-          <v-avatar size="24">
-            <v-icon 
-              :icon="getSentimentIcon(stock.sentiment)"
-              :color="getSentimentColor(stock.sentiment)"
-              size="small"
-            />
-          </v-avatar>
-            <v-chip size="small"
-            class="tw-capitalize"  
-            :color="getSentimentColor(stock.sentiment)" 
-            variant="outlined"
-          >
-            {{ stock.sentiment }}
-          </v-chip>
-        </td>
-
-          <!-- Action Advice Column -->
-        <td class="text-center pa-2 py-0">
-          <v-avatar size="24">
-            <v-icon 
-              :icon="getAdviceActionIcon(stock.advice)"
-              :class="getAdviceActionColor(stock.advice).class"
-              size="small"
-            />
-          </v-avatar>
-          <v-chip size="small"
-            class="tw-capitalize"  
-            :color="getAdviceActionColor(stock.advice).vuetify" 
-            variant="outlined"
-          >
-            {{ stock.advice }}
-          </v-chip>
-        </td>
-
-        <td class="text-center pa-2 py-0">
-         {{ getDateString(stock.lastRatingDate) }}
-        </td>
-      </tr>
-    </tbody>
-  </v-table>
+    <!-- Last Rating Date Column -->
+    <template v-slot:item.lastRatingDate="{ item }">
+      {{ getDateString(item.lastRatingDate) }}
+    </template>
+  </v-data-table>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { getAdviceActionColor, getAdviceActionIcon } from '@/shared/helpers/adviceActions'
 import { getSentimentColor, getSentimentIcon } from '@/shared/helpers/sentiment'
-
 
 export interface TickerRow {
   ticker: string
@@ -139,8 +134,55 @@ interface Emits {
   (e: 'rowClick', stock: TickerRow): void
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
+
+type Header = {
+  title: string
+  key: string
+  align: 'start' | 'center'
+  sortable: boolean
+}
+
+// Define table headers with sorting
+const headers = computed<Header[]>(() => [
+  { 
+    title: 'Stock', 
+    key: 'ticker', 
+    align: 'start',
+    sortable: true 
+  },
+  { 
+    title: 'Price', 
+    key: 'price', 
+    align: 'start',
+    sortable: true 
+  },
+  { 
+    title: 'Change', 
+    key: 'change', 
+    align: 'start',
+    sortable: true 
+  },
+  { 
+    title: 'Sentiment', 
+    key: 'sentiment', 
+    align: 'center',
+    sortable: true 
+  },
+  { 
+    title: 'Action Advice', 
+    key: 'advice', 
+    align: 'center',
+    sortable: true 
+  },
+  { 
+    title: 'Last Rating Date', 
+    key: 'lastRatingDate', 
+    align: 'center',
+    sortable: true 
+  }
+])
 
 // Helper functions
 const getCompanyInitials = (companyName: string): string => {
@@ -161,22 +203,20 @@ const getChangeColorClass = (change: number): string => {
   return change >= 0 ? 'text-green-darken-2' : 'text-red-darken-2'
 }
 
-
 const getDateString = (date: string | Date): string => {
-  if (!date) return '';
+  if (!date) return ''
 
-  const d = new Date(date);
+  const d = new Date(date)
 
   if (isNaN(d.getTime())) {
-    return 'Not available';
+    return 'Not available'
   }
 
-  return d.toLocaleDateString();
+  return d.toLocaleDateString()
 }
 
-
-const handleRowClick = (stock: TickerRow) => {
-  emit('rowClick', stock)
+const handleRowClick = (_event: any, { item }: { item: TickerRow }) => {
+  emit('rowClick', item)
 }
 </script>
 
@@ -186,27 +226,22 @@ const handleRowClick = (stock: TickerRow) => {
   border-spacing: 0;
 }
 
-.stock-row {
-  height: 18px!important;
-  border-bottom: 1px solid #e0e0e0;
+:deep(.v-data-table__tr) {
   cursor: pointer;
   transition: background-color 0.2s ease;
 }
 
-.stock-row:last-child {
-  border-bottom: none;
-}
-
-.stock-row:hover {
+:deep(.v-data-table__tr:hover) {
   background-color: #f5f5f5;
 }
 
-:deep(.v-table thead th) {
-  border-bottom: 1px solid #e0e0e0;
-  background-color: #fafafa;
+:deep(.v-data-table thead th) {
+  background-color: #fafafa !important;
+  font-weight: 600 !important;
+  color: #616161 !important;
+}
+
+:deep(.v-data-table__td) {
   padding: 8px 12px !important;
-  height: 36px !important;
-  font-size: 0.875rem !important;
-  line-height: 1.25rem !important;
 }
 </style>

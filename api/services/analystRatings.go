@@ -12,29 +12,15 @@ import (
 	"gorm.io/gorm"
 )
 
-// StockRecommendation struct for stock recommendation
-// Ticker is the stock ticker
-type StockRecommendation struct {
-	Ticker     string                `json:"ticker"`
-	Company    string                `json:"company"`
-	Action     models.Action         `json:"action"`
-	Brokerage  string                `json:"brokerage"`
-	TargetFrom models.CurrencyString `json:"target_from"`
-	TargetTo   models.CurrencyString `json:"target_to"`
-	RatingFrom string                `json:"rating_from"`
-	RatingTo   string                `json:"rating_to"`
-	Time       time.Time             `json:"time"`
-}
-
 // AnalystRatingResponse struct for analyst ratings response
 type AnalystRatingResponse struct {
-	Next  string                `json:"next_page"`
-	Items []StockRecommendation `json:"items"`
+	Next  string                       `json:"next_page"`
+	Items []models.StockRecommendation `json:"items"`
 }
 
 // AnalystRatingsServiceInterface interface for analyst ratings service
 type AnalystRatingsServiceInterface interface {
-	GetAll() ([]StockRecommendation, error)
+	GetAll() ([]models.StockRecommendation, error)
 	GetWithNext(nextPage string) (AnalystRatingResponse, error)
 }
 
@@ -50,8 +36,8 @@ func NewAnalystRatingsService(db *gorm.DB) AnalystRatingsService {
 
 // GetAll returns all recommendations
 // iterate all items until next_page is empty
-func (s *AnalystRatingsService) GetAll() ([]StockRecommendation, error) {
-	var recommendations []StockRecommendation
+func (s *AnalystRatingsService) GetAll() ([]models.StockRecommendation, error) {
+	var recommendations []models.StockRecommendation
 	var recommendation AnalystRatingResponse
 
 	client := CustomClient.NewCustomClient(config.StockApi().Url)

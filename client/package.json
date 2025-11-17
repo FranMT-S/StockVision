@@ -11,6 +11,7 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
+    "test:debug":"vitest --run --inspect-brk --no-file-parallelism",
     "coverage": "vitest run --coverage"
   },
   "dependencies": {

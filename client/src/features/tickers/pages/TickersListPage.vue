@@ -21,7 +21,7 @@
       <v-card elevation="2" class="rounded-lg">
         <v-card-text class="pa-0">
           <!-- Loading State -->
-          <StockTableSkeleton style="max-height: calc(100vh - 200px)" v-if="loading" :rows="6" />
+          <StockTableSkeleton style="max-height: calc(100vh - 196px)" v-if="loading" :rows="6" />
           
           <!-- Error State -->
           <ErrorFetchData v-else-if="error" :error="error" class="pa-8 text-center" @click="tickersStore.fetchTickers()"/> 
@@ -29,7 +29,7 @@
           <!-- Data State -->
           <TickersTable 
             v-else-if="tableRows.length > 0" 
-            style="max-height: calc(100vh - 200px)"
+            style="max-height: calc(100vh - 196px)"
             :rows="tableRows"
             @row-click="handleStockClick"
           />
